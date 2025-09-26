@@ -1,1 +1,9 @@
-Hacer el css para el login
+Respecto a:
+
+El sistema deberá gestionar usuarios y grupos. Autenticar y permitir el registro de usuarios.
+    _Hacer el css para el login
+    _Considerar utilizar base de datos real para los usuarios
+        .Agregar recuperar contraseña?
+        .Crear grupos de usuarios es necesario para esta app?
+
+
