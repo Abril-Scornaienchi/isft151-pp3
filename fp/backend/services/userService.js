@@ -7,7 +7,7 @@
 
 // 💡 ALMACENAMIENTO TEMPORAL: Array que simula la tabla de usuarios en una base de datos (hardcodeada).
 let usersDB = [
-    { id: 1, nombre: 'Admin User', email: 'admin@app.com', password: 'hash_simulado_admin' } 
+    { id: 1, nombre: 'Admin User', email: 'admin@app.com', password: '123' } 
 ];
 
 // Variable para el próximo ID de usuario (simula un auto-incremento de la DB).
@@ -60,7 +60,7 @@ function registerUser(nombre, email, password) {
         id: nextId++,
         nombre,
         email,
-        password: hashedPassword // Almacenamos el hash simulado internamente
+        password: password // Almacenamos el hash simulado internamente
     };
     usersDB.push(newUser);
 
