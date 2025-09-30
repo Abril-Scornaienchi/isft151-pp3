@@ -7,7 +7,8 @@
 
 // 💡 ALMACENAMIENTO TEMPORAL: Array que simula la tabla de usuarios en una base de datos (hardcodeada).
 let usersDB = [
-    { id: 1, nombre: 'Admin User', email: 'admin@app.com', password: '123' } 
+    { id: 1, nombre: 'Admin', email: 'admin@app.com', password: '123', grupo: 'Admin' }, 
+    { id: 2, nombre: 'Aylen', email: 'aylen@app.com' , password: '123', grupo: 'User' },
 ];
 
 // Variable para el próximo ID de usuario (simula un auto-incremento de la DB).
@@ -32,7 +33,8 @@ function findUserByCredentials(email, password) {
             id: user.id,
             nombre: user.nombre,
             email: user.email,
-            passwordHash: user.password //  RETORNO: Se crea el objeto con el campo passwordHash
+            passwordHash: user.password, //  RETORNO: Se crea el objeto con el campo passwordHash
+            grupo: user.grupo,
         };
     }
     return undefined;
@@ -53,23 +55,22 @@ function registerUser(nombre, email, password) {
         return null; // Conflicto: Email ya en uso
     }
 
-    // 2. Creación del nuevo usuario con Simulación del HASH: Usamos la contraseña tal cual para la simulación
-    const hashedPassword = `hash_simulado_${email}`; 
-
     const newUser = {
         id: nextId++,
         nombre,
         email,
-        password: password // Almacenamos el hash simulado internamente
+        password: password,
+        grupo: 'User' // Todos los nuevos usuarios son del grupo 'User'
     };
     usersDB.push(newUser);
 
-    // 3. Retornar el contrato de datos del nuevo usuario
+    // 2. Retornar el contrato de datos del nuevo usuario
     return {
         id: newUser.id,
         nombre: newUser.nombre,
         email: newUser.email,
-        passwordHash: newUser.password
+        passwordHash: newUser.password,
+        grupo: newUser.grupo
     };
 }
 
