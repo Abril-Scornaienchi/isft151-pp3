@@ -1,7 +1,11 @@
 Respecto a:
 
 El sistema deberá gestionar usuarios y grupos. Autenticar y permitir el registro de usuarios.
-    _Considerar utilizar base de datos real para los usuarios
-        .Agregar recuperar contraseña?
+
+
+Para un refactoring:
+        .Agregar recuperar contraseña
+        .Agregar validacion de usuarios
+        .Optimizar css
 
 
