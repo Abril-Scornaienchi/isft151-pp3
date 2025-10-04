@@ -26,7 +26,7 @@ const mongoose = require('mongoose');
 const app = express();
 const PORT = 3000;
 
-const DB_URI = process.env.MONGO_URI || 'mongodb+srv://adminUserA:rzVBpgvkVWCmcMBQ@cluster0.ysdsjmm.mongodb.net/Project0?retryWrites=true&w=majority&appName=Cluster0'; 
+const DB_URI = process.env.MONGO_URI || 'mongodb+srv://'; 
 
 mongoose.connect(DB_URI)
     .then(() => console.log('✅ Conexión exitosa a MongoDB.'))
