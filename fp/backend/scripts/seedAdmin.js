@@ -4,7 +4,7 @@
 const mongoose = require('mongoose');
 const { initializeAdminUser } = require('../services/userService');
 
-const DB_URI = process.env.MONGO_URI || 'mongodb+srv://adminUserA:rzVBpgvkVWCmcMBQ@cluster0.ysdsjmm.mongodb.net/Project0?retryWrites=true&w=majority&appName=Cluster0';
+const DB_URI = process.env.MONGO_URI || 'mongodb+srv://';
 
 async function run() {
   try {
