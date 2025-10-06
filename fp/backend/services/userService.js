@@ -98,6 +98,7 @@ async function registerUser(username, email, password) {
 }
 
 module.exports = {
+    initializeAdminUser,
     findUserByCredentials,
     registerUser,
 };

@@ -34,8 +34,24 @@ npm install
 
 Ejecuta el script de seed para crear el usuario administrador inicial en tu base de datos (admin@app.com / 123). Solo debes ejecutar esto la primera vez.
 
-```bash
-node seedAdmin.js
+Desde la carpeta `fp/backend` puedes hacerlo de dos formas:
+
+- Usando el script npm (recomendado):
+
+```powershell
+npm run seed
+```
+
+- Ejecutando el script directamente:
+
+```powershell
+node .\scripts\seedAdmin.js
+```
+
+Si necesitas usar una URI de Mongo distinta a la por defecto, exportala en la misma línea (PowerShell):
+
+```powershell
+$env:MONGO_URI='tu_mongo_uri_aqui'; npm run seed
 ```
 
 ## 4. ▶️ Iniciar la Aplicación
@@ -64,7 +80,7 @@ node server.js
 
 Una vez que el backend esté ejecutándose, abre el archivo en tu navegador:
 
-- Busca el archivo `index.html` en la carpeta principal de tu proyecto (`fp/`).
+- Busca el archivo `index.html` en la carpeta `fp/frontend/` (ruta: `fp/frontend/index.html`).
 - Ábrelo con doble clic.
 
 ¡LISTO! La autenticación está configurada y lista para probar las rutas de Login (`/index.html`) y Registro (`/register.html`).
