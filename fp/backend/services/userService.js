@@ -1,81 +1,104 @@
-/**
- * @file userService.js
- * @brief Módulo de servicio para la gestión de usuarios (persistencia y lógica de negocio).
- * * Este módulo se encarga de simular las operaciones de base de datos para los usuarios,
- * manteniendo los datos en memoria (hardcodeados).
- */
+//userService.js
 
-// 💡 ALMACENAMIENTO TEMPORAL: Array que simula la tabla de usuarios en una base de datos (hardcodeada).
-let usersDB = [
-    { id: 1, nombre: 'Admin', email: 'admin@app.com', password: '123', grupo: 'Admin' }, 
-    { id: 2, nombre: 'Aylen', email: 'aylen@app.com' , password: '123', grupo: 'User' },
-];
+const User_data = require('../models/User_data'); // Importamos el Modelo
+const bcrypt = require('bcryptjs'); 
 
-// Variable para el próximo ID de usuario (simula un auto-incremento de la DB).
-let nextId = usersDB.length + 1;
+// =================================================================
+// 💡 LÓGICA DE GESTIÓN DE USUARIOS (ahora ASÍNCRONA Y PERSISTENTE)
+// =================================================================
 
 /**
- * @brief Busca un usuario por sus credenciales (email y contraseña).
- * * Esta función simula la consulta a la base de datos para autenticar un usuario.
- * Preserva el contrato de datos al devolver un objeto sin la contraseña.
- * * @param {string} email - Correo electrónico del usuario.
- * @param {string} password - Contraseña sin cifrar.
- * @returns {object | undefined} Objeto Usuario con { id, nombre, email, passwordHash } si es válido, o 'undefined'.
+ * @brief Función auxiliar para crear un usuario inicial si la DB está vacía.
+ * Esto asegura que siempre haya un usuario admin para pruebas.
  */
-function findUserByCredentials(email, password) {
-    // Buscar la coincidencia de email y contraseña en el array
-     // ⚠️ NOTA: En la práctica, se compararía 'password' con el hash real (ej: bcrypt.compare(password, user.password))
-    const user = usersDB.find(u => u.email === email && u.password === password);
+async function initializeAdminUser() {
+    try {
+        const adminExists = await User_data.findOne({ email: 'admin@app.com' });
+        
+        if (!adminExists) {
+            // Cifra la contraseña '123'
+            const salt = await bcrypt.genSalt(10);
+            const hashedPassword = await bcrypt.hash('123', salt);
+
+            await User_data.create({
+                username: 'Admin', 
+                email: 'admin@app.com',
+                passwordHash: hashedPassword,
+                grupo: 'Admin'
+            });
+            console.log('✅ Usuario Admin inicial (admin@app.com/123) creado en la DB.');
+        }
+    } catch (error) {
+        console.error('❌ Error al inicializar usuario admin:', error.message);
+    }
+}
+
+/**
+ * @brief Busca un usuario por sus credenciales (email y contraseña) y verifica el hash.
+ */
+async function findUserByCredentials(email, password) {
+    // 1. Encontrar el usuario por email
+    const user = await User_data.findOne({ email });
     
-    if (user) {
-        // Retorna solo los datos esenciales (el contrato)
+    if (!user) {
+        return null; // Usuario no encontrado
+    }
+
+    // 2. Comparar la contraseña ingresada con el hash cifrado
+    const isMatch = await bcrypt.compare(password, user.passwordHash);
+
+    if (isMatch) {
+        // Retorna el contrato de datos (simulando la respuesta de autenticación)
         return {
-            id: user.id,
-            nombre: user.nombre,
+            _id: user._id,
+            username: user.username, 
             email: user.email,
-            passwordHash: user.password, //  RETORNO: Se crea el objeto con el campo passwordHash
             grupo: user.grupo,
+            passwordHash: user.passwordHash,
         };
     }
-    return undefined;
+    
+    return null; // Contraseña incorrecta
 }
 
 /**
- * @brief Registra un nuevo usuario en el sistema.
- * * Verifica si el email ya existe antes de añadir un nuevo usuario al 'almacén' en memoria.
- * * @param {string} nombre - Nombre del usuario.
- * @param {string} email - Correo electrónico único para el registro.
- * @param {string} password - Contraseña del usuario.
- * @returns {object | null} El nuevo objeto Usuario con { id, nombre, email, passwordHash } o 'null'.
+ * @brief Registra un nuevo usuario en la base de datos.
  */
-function registerUser(nombre, email, password) {
-    // 1. Verificar si el usuario ya existe
-    const usuarioExistente = usersDB.find(u => u.email === email);
-    if (usuarioExistente) {
-        return null; // Conflicto: Email ya en uso
+async function registerUser(username, email, password) {
+
+    // 1. Cifrar la contraseña
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
+    try {
+        // 2. Crear el nuevo usuario en la DB
+        const newUser = await User_data.create({
+            username: username,
+            email: email,
+            passwordHash: hashedPassword,
+            grupo: 'User' // Asignar grupo por defecto
+        });
+
+        // 3. Retornar el contrato de datos del nuevo usuario
+        return {
+            _id: newUser._id,
+            username: newUser.username,
+            email: newUser.email,
+            grupo: newUser.grupo,
+            passwordHash: newUser.passwordHash,
+        };
+    } catch (error) {
+        // Manejo de error de unicidad (si el email o username ya existe)
+        if (error.code === 11000) { // Código de error de duplicado de MongoDB
+            return null; // El registro falló por duplicidad
+        }
+        console.error('Error al registrar usuario en la DB:', error);
+        throw error;
     }
-
-    const newUser = {
-        id: nextId++,
-        nombre,
-        email,
-        password: password,
-        grupo: 'User' // Todos los nuevos usuarios son del grupo 'User'
-    };
-    usersDB.push(newUser);
-
-    // 2. Retornar el contrato de datos del nuevo usuario
-    return {
-        id: newUser.id,
-        nombre: newUser.nombre,
-        email: newUser.email,
-        passwordHash: newUser.password,
-        grupo: newUser.grupo
-    };
 }
 
-// 💡 EXPORTACIÓN: Hacemos que solo estas funciones sean accesibles desde fuera del módulo.
 module.exports = {
+    initializeAdminUser,
     findUserByCredentials,
     registerUser,
 };
