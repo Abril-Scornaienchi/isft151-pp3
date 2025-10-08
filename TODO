@@ -1,0 +1,11 @@
+Respecto a:
+
+El sistema deberá gestionar usuarios y grupos. Autenticar y permitir el registro de usuarios.
+
+
+Para un refactoring:
+        .Agregar recuperar contraseña
+        .Agregar validacion de usuarios
+        .Optimizar css
+
+

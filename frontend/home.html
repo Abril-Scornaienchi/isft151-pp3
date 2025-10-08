@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inventario y Recetas</title>
+
+        <link rel="stylesheet" href="assets/styles.css"> 
+
+    </head>
+<body>
+        <div class="container">
+        
+        <h1>Gestión de Despensa</h1>
+        
+        <div class="section-box"> 
+            <form id="add-item-form">
+                <h2>Agregar Ingrediente</h2>
+                <input type="text" id="article_name" placeholder="Nombre" required>
+                <input type="number" id="quantity" placeholder="Cantidad" required>
+                <select id="unit" required>
+                    <option value="unidades">Unidades</option>
+                    <option value="kg">KG</option>
+                    <option value="litro">Litro</option>
+                    <option value="gramo">Gramos</option>
+                </select>
+                <button type="submit">Agregar al Inventario</button>
+                <button id="recordAudioBtn" type="button" class="btn-audio">
+                    🎙️ Ingreso por Voz
+                </button>
+                <p id="speechResult" style="margin-top: 10px; color: green;"></p>
+            </form>
+        </div>
+        
+        <hr>
+        
+        <div class="section-box">
+            <h2>Mi Inventario</h2>
+            <table class="inventory-table">
+                <thead>
+                    <tr>
+                        <th>Nombre</th>
+                        <th>Cantidad</th>
+                        <th>Unidad</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="inventory-body">
+                </tbody>
+            </table>
+        </div>
+        
+        <hr>
+        
+        <div class="section-box">
+            <h2>Recetas Sugeridas</h2>
+            <button id="search-recipes-btn">Buscar Recetas con mi Inventario</button>
+            
+            <ul id="recipes-list">
+            </ul>
+        </div>
+
+        <hr>
+        <p><a href="javascript:void(0)" onclick="handleLogout()">Cerrar Sesión</a></p>
+    
+        </div> 
+
+    <script src="./assets/js/inventory.js"></script> 
+    
+    <script>
+        // Llama a la función que inicia todo (verifica sesión, carga inventario y conecta eventos)
+        initHome(); 
+
+        // Función auxiliar para cerrar sesión (sólo Frontend)
+        function handleLogout() {
+            localStorage.removeItem('userId');
+            window.location.href = 'index.html';
+        }
+    </script>
+    
+</body>
+</html>
