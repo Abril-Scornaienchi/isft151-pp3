@@ -110,7 +110,8 @@ if (loginForm) {
             const result = await sendAuthRequest('/login', data);
 
             // Éxito: La Promesa resolvió sin errores (código 200).
-            displayMessage(messageId, `Bienvenido, ${result.nombre}. Redirigiendo...`, false);
+            // Usamos 'username' que es lo que el backend devuelve; si no existe, usamos 'nombre' como fallback.
+            displayMessage(messageId, `Bienvenido, ${result.username || result.nombre || ''}. Redirigiendo...`, false);
             
             // Redirección con un pequeño retraso para que el usuario lea el mensaje de éxito.
             setTimeout(() => {
@@ -136,7 +137,7 @@ if (registerForm) {
     registerForm.addEventListener('submit', async (event) => {
         event.preventDefault(); 
 
-        const nombre = document.getElementById('name').value;
+        const username = document.getElementById('username').value;
         const email = document.getElementById('email').value;
         const password = document.getElementById('password').value;
         const messageId = 'register-message';
@@ -145,7 +146,8 @@ if (registerForm) {
 
         // 💡 Manejo de la Asincronía
         try {
-            const data = { nombre, email, password };
+            // El backend espera 'username' en lugar de 'nombre'. Mapeamos aquí para mantener la UI en español.
+            const data = { username, email, password };
             // Llama a la API de registro y espera el resultado.
             await sendAuthRequest('/register', data);
 

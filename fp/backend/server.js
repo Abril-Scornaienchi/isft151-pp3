@@ -1,31 +1,38 @@
-/* 
-1. fp/backend/server.js (El Controlador)
-Este archivo actúa como el Controlador o Capa de Routers. Su única responsabilidad es:
+/* 1. fp/backend/server.js (El Controlador y Punto de Entrada)
+Este archivo actúa como el Controlador o Capa de Routers. Sus responsabilidades son:
 
-Configurar el servidor Express (app.use(express.json())).
+1. **Configuración de Express y MongoDB:** Inicia el servidor Express y establece la conexión principal a la base de datos **MongoDB** usando **Mongoose**.
+2. **Definición de Middlewares:** Configura middlewares esenciales (CORS, body-parser JSON).
+3. **Definición de Rutas (Endpoints):** Define las rutas públicas de la API (ej: /api/register, /api/login).
+4. **Delegación Asíncrona:** Delega la lógica de negocio y persistencia de datos (ahora asíncrona) a la capa de servicios (userService).
+5. **Manejo de Respuesta:** Maneja la respuesta HTTP (códigos de estado 200, 401, 409, etc.) y el formato JSON.
 
-Definir las rutas (/api/register, /api/login).
-
-Delegar la lógica de negocio a la capa de servicios (userService).
-
-Manejar la respuesta HTTP (códigos de estado 200, 401, etc.) y el formato JSON.
-
-Lo crucial: Este archivo no sabe cómo se autentica un usuario, solo sabe a quién preguntarle (userService).
+Lo crucial: Este archivo **coordina** la aplicación, pero el módulo 'userService' es quien interactúa directamente con Mongoose para leer y escribir en la base de datos.
 */
 
 /**
  * @file server.js
  * @brief Punto de entrada de la aplicación backend.
- * * Configura el servidor Express y define las rutas de la API, delegando la lógica
- * de negocio y persistencia al módulo userService.
+ * * Configura la conexion a MongoDB y el servidor Express. Define las rutas de la API, 
+ * delegando la lógica de negocio y persistencia al módulo userService.
  */
 
 // 1. IMPORTACIONES Y CONFIGURACIÓN INICIAL
 const express = require('express');
 // Importamos el módulo de servicio (nuestra lógica de negocio encapsulada)
 const userService = require('./services/userService'); 
+const mongoose = require('mongoose');
+
 const app = express();
 const PORT = 3000;
+
+const DB_URI = process.env.MONGO_URI || 'mongodb+srv://'; 
+
+mongoose.connect(DB_URI)
+    .then(() => console.log('✅ Conexión exitosa a MongoDB.'))
+    .catch(err => {
+        console.error('❌ Error de conexión a MongoDB:', err.message);
+    });
 
 // 2. MIDDLEWARES (Configuraciones para Express)
 /**
@@ -54,26 +61,26 @@ app.use((req, res, next) => {
  * @brief Endpoint para el registro de nuevos usuarios.
  * * @route POST /api/register
  */
-app.post('/api/register', (req, res) => {
-    const { nombre, email, password } = req.body;
+app.post('/api/register', async (req, res) => {
+    const { username, email, password } = req.body;
 
     // Validación de datos simple
-    if (!nombre || !email || !password) {
+    if (!username || !email || !password) {
         return res.status(400).json({ error: 'Todos los campos son obligatorios.' });
     }
 
     // 💡 DELEGACIÓN: El controlador llama al servicio, sin saber dónde se almacenan los datos.
-    const nuevoUsuario = userService.registerUser(nombre, email, password);
+    const nuevoUsuario = await userService.registerUser(username, email, password);
 
     if (nuevoUsuario === null) {
-        // 409: Conflicto - Email duplicado
-        return res.status(409).json({ error: 'Este email ya está registrado.' });
+        // 409: Conflicto - Email/username duplicado
+        return res.status(409).json({ error: 'Este email o nombre de usuario ya está registrado.' });
     }
 
     // 201: Creado
     return res.status(201).json({ 
-        id: nuevoUsuario.id,
-        nombre: nuevoUsuario.nombre,
+        id: nuevoUsuario._id,
+        username: nuevoUsuario.username,
         email: nuevoUsuario.email,
         message: 'Usuario registrado exitosamente.' 
     });
@@ -83,15 +90,15 @@ app.post('/api/register', (req, res) => {
  * @brief Endpoint para el inicio de sesión (Login).
  * * @route POST /api/login
  */
-app.post('/api/login', (req, res) => {
+app.post('/api/login', async (req, res) => {
     const { email, password } = req.body;
 
     if (!email || !password) {
         return res.status(400).json({ error: 'Email y contraseña son obligatorios.' });
     }
 
-    // 💡 DELEGACIÓN: El controlador llama al servicio para verificar credenciales.
-    const usuario = userService.findUserByCredentials(email, password);
+    // 💡 DELEGACIÓN: El controlador llama al servicio, que ahora es ASÍNCRONO.
+    const usuario = await userService.findUserByCredentials(email, password);
 
     if (!usuario) {
         // 401: No autorizado - Credenciales inválidas
@@ -100,8 +107,8 @@ app.post('/api/login', (req, res) => {
 
     // 200: OK - Login exitoso
     return res.status(200).json({ 
-        id: usuario.id, 
-        nombre: usuario.nombre, 
+        id: usuario._id, 
+        username: usuario.username, 
         email: usuario.email,
         message: 'Inicio de sesión exitoso.' 
     });
