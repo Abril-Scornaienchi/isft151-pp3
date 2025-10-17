@@ -16,7 +16,7 @@ body {
     /* Degradado de fondo con un ambiente */
     background: linear-gradient(135deg, #e0f2f7 0%, #d8e6f1 50%, #d0e0ec 100%);
     color: #333;
-    overflow: hidden; /* Evita barras de desplazamiento si hay algo que sobresale */
+    overflow-x: hidden; /* Evita la barra de desplazamiento horizontal */
     position: relative; /* Para el fondo abstracto */
 }
 
@@ -216,4 +216,3 @@ form button[type="submit"]:hover {
     margin-top: 25px;
     font-size: 0.9em;
 }
-

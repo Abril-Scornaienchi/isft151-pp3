@@ -169,7 +169,7 @@ async function handleUpdateItem(alimentoId) {
         return;
     }
     
-    // 2. Obtener la unidad del DOM (esto está bien)
+    // 2. Obtener la unidad del DOM
     const unidad = document.querySelector(`#inventory-item-${alimentoId} .unit-cell`).textContent;
 
     try {
@@ -287,6 +287,31 @@ function renderRecipes(recipes) {
         `;
         list.appendChild(li);
     });
+}
+
+/**
+ * @brief Obtiene los detalles de una receta específica y abre su URL en una nueva pestaña.
+ * @param {number} recipeId - El ID de la receta de Spoonacular.
+ */
+async function handleViewRecipeDetails(recipeId) {
+    // Clave de la API. En un proyecto real, esto no debería estar en el frontend.
+    const SPOONACULAR_API_KEY = 'dfc3580b5d694a24afedb23ca1ca8478';
+    const url = `https://api.spoonacular.com/recipes/${recipeId}/information?apiKey=${SPOONACULAR_API_KEY}`;
+
+    try {
+        const response = await fetch(url);
+        const recipeDetails = await response.json();
+
+        if (!response.ok) {
+            throw new Error(recipeDetails.message || 'No se pudieron obtener los detalles de la receta.');
+        }
+
+        // Abre la URL de la receta en una nueva pestaña
+        window.open(recipeDetails.sourceUrl, '_blank');
+    } catch (error) {
+        console.error('Error al obtener detalles de la receta:', error);
+        alert('Error: ' + error.message);
+    }
 }
 
 // -----------------------------------------------------
