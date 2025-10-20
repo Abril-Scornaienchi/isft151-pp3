@@ -128,24 +128,13 @@ form label {
     font-weight: 500;
 }
 
-/* =================================================================
- * REEMPLAZA TU BLOQUE DE ESTILOS DE FORMULARIO CON ESTE
- * ================================================================= */
-
 form input[type="email"],
 form input[type="password"],
 form input[type="text"],
-/* NUEVO: Añadimos el campo de número para "Cantidad" */
-form input[type="number"], 
-/* NUEVO: Añadimos el selector para "Unidad" */
+form input[type="number"],
 form select {
-    /* CAMBIO: Usamos 100% para que ocupe todo el espacio disponible */
-    width: 100%; 
-    /* NUEVO: Esta es la propiedad MÁS importante. Le dice al navegador que el 
-       padding y el borde deben incluirse DENTRO del width: 100%, evitando 
-       que la caja se desborde. */
-    box-sizing: border-box;
-
+    width: 100%;
+    box-sizing: border-box; /* Importante para que el padding no rompa el ancho */
     padding: 12px 10px; 
     border: 1px solid #ddd;
     border-radius: 8px;
@@ -158,10 +147,12 @@ form select {
 
 form input[type="email"]:focus,
 form input[type="password"]:focus,
-form input[type="text"]:focus {
-    border-color: #88bde6; /* Borde azul al enfocar */
-    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.08), 0 0 0 3px rgba(136, 189, 230, 0.3); /* Sombra de enfoque */
-    outline: none; /* Elimina el contorno por defecto del navegador */
+form input[type="text"]:focus,
+form input[type="number"]:focus,
+form select:focus {
+    border-color: #88bde6; 
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.08), 0 0 0 3px rgba(136, 189, 230, 0.3);
+    outline: none;
 }
 
 /* Botón de envío */
@@ -229,4 +220,54 @@ form button[type="submit"]:hover {
 .container p:last-of-type {
     margin-top: 25px;
     font-size: 0.9em;
+}
+
+/* =================================================================
+ * 6. ESTILOS PARA LA LISTA DE RECETAS
+ * ================================================================= */
+
+/* 1. Contenedor principal de la lista */
+#recipes-list {
+    list-style-type: none; /* ¡Esto quita las viñetas (•)! */
+    padding-left: 0;       /* Quita el espaciado por defecto de la lista */
+    width: 100%;
+    margin-top: 20px;
+}
+
+/* 2. Cada "tarjeta" de receta */
+.recipe-item {
+    background-color: #f9f9f9; /* Un fondo blanco-grisáceo */
+    border: 1px solid #eee;
+    border-radius: 8px;        
+    padding: 15px 20px;        /* Espaciado interno */
+    margin-bottom: 12px;       /* Separación entre tarjetas */
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05); /* Sombra sutil */
+    transition: all 0.2s ease-in-out;
+    text-align: left; /* Alinea el texto de la tarjeta a la izquierda */
+}
+
+/* 3. Efecto visual al pasar el mouse */
+.recipe-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08);
+}
+
+/* 4. Título de la receta (el link) */
+.recipe-title {
+    font-size: 1.15em;
+    font-weight: 600;
+    color: #0056b3; /* Un azul más profesional */
+    cursor: pointer;   
+    margin-bottom: 5px; 
+}
+
+.recipe-title:hover {
+    text-decoration: underline;
+    color: #003d80;
+}
+
+/* 5. Texto de ingredientes faltantes */
+.recipe-missing {
+    font-size: 0.9em;
+    color: #666; /* Gris sutil */
 }

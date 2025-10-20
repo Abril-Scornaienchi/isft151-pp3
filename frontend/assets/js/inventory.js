@@ -28,6 +28,8 @@ function initHome() {
         document.getElementById('add-item-form').addEventListener('submit', handleAddItem);
         // Conecta el botón de buscar recetas
         document.getElementById('search-recipes-btn').addEventListener('click', handleSearchRecipes);
+        // Conecta el enlace de cerrar sesión
+        document.getElementById('logout-link').addEventListener('click', handleLogout);
     } else {
         window.location.href = 'index.html'; 
     }
@@ -58,6 +60,16 @@ async function loadInventory() {
     }
 }
 
+/**
+ * @brief Maneja el cierre de sesión del usuario.
+ * Limpia el almacenamiento local y redirige a la página de inicio de sesión.
+ * @param {Event} event - El objeto de evento del clic (para prevenir el comportamiento por defecto del enlace).
+ */
+function handleLogout(event) {
+    event.preventDefault(); // Evita que el enlace '#' navegue
+    localStorage.removeItem('userId');
+    window.location.href = 'index.html';
+}
 
 // =========================================================================
 // 2. OPERACIONES CRUD (CREATE, UPDATE, DELETE)
@@ -159,37 +171,25 @@ async function handleDeleteItem(alimentoId) {
  * @param {string} alimentoId - El ID de MongoDB del alimento que se desea actualizar.
  */
 async function handleUpdateItem(alimentoId) {
+    console.log("ID del alimento a eliminar:", alimentoId); 
+    console.log("ID del usuario (currentUserId):", currentUserId);
+    // 1. En un entorno simple, pedimos la nueva cantidad por un prompt
+    const nuevaCantidadStr = prompt("Introduce la nueva cantidad:");
     
-    // 1. Obtenemos la fila (row) completa del ingrediente
-    const row = document.getElementById(`inventory-item-${alimentoId}`);
-    if (!row) return; // Seguridad por si la fila no existe
-
-    // 2. Extraemos los valores ACTUALES de la tabla para usarlos como default en los prompts
-    const nombreActual = row.cells[0].textContent;
-    const cantidadActual = row.cells[1].textContent;
-    const unidadActual = row.cells[2].textContent;
-
-    // 3. Pedimos los nuevos valores (usando los actuales como valor por defecto)
-    const nuevoNombre = prompt("Nombre del artículo:", nombreActual);
-    const nuevaCantidad = prompt("Nueva cantidad:", cantidadActual);
-    const nuevaUnidad = prompt("Nueva unidad:", unidadActual);
-
-    // 4. Si el usuario cancela CUALQUIERA de los prompts, salimos.
-    if (nuevoNombre === null || nuevaCantidad === null || nuevaUnidad === null) {
-        alert("Actualización cancelada.");
+    if (nuevaCantidadStr === null || isNaN(parseInt(nuevaCantidadStr))) {
+        alert("Actualización cancelada o cantidad inválida.");
         return;
     }
+    
+    // 2. Obtener la unidad del DOM
+    const unidad = document.querySelector(`#inventory-item-${alimentoId} .unit-cell`).textContent;
 
     try {
-        // 5. Llamamos a la ruta PUT con los 3 campos en el body
+        // Llama a la ruta PUT
         const response = await fetch(`${BACKEND_URL}/inventario/${alimentoId}?userId=${currentUserId}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-                article_name: nuevoNombre, 
-                quantity: nuevaCantidad, 
-                unit: nuevaUnidad 
-            })
+            body: JSON.stringify({ quantity: nuevaCantidadStr, unit: unidad }) // Datos a actualizar
         });
 
         const result = await response.json();
@@ -218,6 +218,14 @@ async function handleUpdateItem(alimentoId) {
  * Si la llamada es exitosa, delega el resultado a la función de renderizado.
  */
 async function handleSearchRecipes() {
+    // Verificación previa: ¿Hay ingredientes en el inventario?
+    const inventoryBody = document.getElementById('inventory-body');
+    if (!inventoryBody || inventoryBody.children.length === 0 || (inventoryBody.children.length === 1 && inventoryBody.children[0].children.length === 1)) {
+        alert('Debes agregar al menos un ingrediente a tu inventario para poder buscar recetas.');
+        renderRecipes([]); // Limpia la lista por si había algo antes
+        return; // Detiene la ejecución de la función
+    }
+
     try {
         // Llama a tu ruta GET para recetas
         const response = await fetch(`${BACKEND_URL}/recetas/inventario?userId=${currentUserId}`);
@@ -267,18 +275,10 @@ function renderInventory(inventory) {
         unitCell.classList.add('unit-cell'); 
         
         const actionsCell = row.insertCell();
-
-        // Forma moderna y segura de crear botones y asignar eventos
-        const updateBtn = document.createElement('button');
-        updateBtn.textContent = 'Actualizar';
-        updateBtn.addEventListener('click', () => handleUpdateItem(item._id));
-
-        const deleteBtn = document.createElement('button');
-        deleteBtn.textContent = 'Eliminar';
-        deleteBtn.addEventListener('click', () => handleDeleteItem(item._id));
-
-        actionsCell.appendChild(updateBtn);
-        actionsCell.appendChild(deleteBtn);
+        actionsCell.innerHTML = `
+            <button onclick="handleUpdateItem('${item._id}')">Actualizar</button>
+            <button onclick="handleDeleteItem('${item._id}')">Eliminar</button>
+        `;
     });
 }
 
@@ -298,12 +298,17 @@ function renderRecipes(recipes) {
     
     recipes.forEach(recipe => {
         const li = document.createElement('li');
+        // 1. Añadimos una clase al <li> para poder estilizarlo
+        li.className = 'recipe-item'; 
+        
+        // 2. Creamos un HTML más limpio y estructurado
         li.innerHTML = `
-            <strong style="cursor: pointer; color: blue;" 
-                    onclick="handleViewRecipeDetails(${recipe.id})">
+            <div class="recipe-title" onclick="handleViewRecipeDetails(${recipe.id})">
                 ${recipe.title}
-            </strong> 
-            (Ingredientes faltantes: ${recipe.missedIngredientCount})
+            </div>
+            <div class="recipe-missing">
+                Ingredientes faltantes: ${recipe.missedIngredientCount}
+            </div>
         `;
         list.appendChild(li);
     });
