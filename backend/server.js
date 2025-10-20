@@ -1,4 +1,6 @@
-/* 1. fp/backend/server.js (El Controlador y Punto de Entrada)
+//fp/backend/server.js
+
+/* (El Controlador y Punto de Entrada)
 Este archivo actúa como el Controlador o Capa de Routers. Sus responsabilidades son:
 
 1. **Configuración de Express y MongoDB:** Inicia el servidor Express y establece la conexión principal a la base de datos **MongoDB** usando **Mongoose**.

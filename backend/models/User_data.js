@@ -1,4 +1,4 @@
-// fp/backend/models/User_data.js
+// backend/models/User_data.js
 
 const mongoose = require('mongoose');
 

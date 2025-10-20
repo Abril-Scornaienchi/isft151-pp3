@@ -159,25 +159,33 @@ async function handleDeleteItem(alimentoId) {
  * @param {string} alimentoId - El ID de MongoDB del alimento que se desea actualizar.
  */
 async function handleUpdateItem(alimentoId) {
-    console.log("ID del alimento a eliminar:", alimentoId); 
+    console.log("ID del alimento a actualizar:", alimentoId); 
     console.log("ID del usuario (currentUserId):", currentUserId);
-    // 1. En un entorno simple, pedimos la nueva cantidad por un prompt
-    const nuevaCantidadStr = prompt("Introduce la nueva cantidad:");
     
-    if (nuevaCantidadStr === null || isNaN(parseInt(nuevaCantidadStr))) {
+    // 1. Pedir la nueva cantidad
+    const nuevaCantidadStr = prompt("Introduce la nueva cantidad:");
+    if (nuevaCantidadStr === null || nuevaCantidadStr.trim() === '' || isNaN(parseInt(nuevaCantidadStr))) {
         alert("Actualización cancelada o cantidad inválida.");
         return;
     }
-    
-    // 2. Obtener la unidad del DOM
-    const unidad = document.querySelector(`#inventory-item-${alimentoId} .unit-cell`).textContent;
+
+    // 2. Pedir la nueva unidad
+    const unidadesValidas = ['kg', 'litro', 'gramo', 'ml'];
+    const nuevaUnidad = prompt(`Introduce la nueva unidad (${unidadesValidas.join(', ')}):`);
+    if (nuevaUnidad === null || !unidadesValidas.includes(nuevaUnidad.toLowerCase().trim())) {
+        alert("Actualización cancelada o unidad inválida.");
+        return;
+    }
 
     try {
         // Llama a la ruta PUT
         const response = await fetch(`${BACKEND_URL}/inventario/${alimentoId}?userId=${currentUserId}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ quantity: nuevaCantidadStr, unit: unidad }) // Datos a actualizar
+            body: JSON.stringify({ 
+                quantity: nuevaCantidadStr, 
+                unit: nuevaUnidad.toLowerCase().trim() 
+            }) // Datos a actualizar
         });
 
         const result = await response.json();
@@ -255,10 +263,18 @@ function renderInventory(inventory) {
         unitCell.classList.add('unit-cell'); 
         
         const actionsCell = row.insertCell();
-        actionsCell.innerHTML = `
-            <button onclick="handleUpdateItem('${item._id}')">Actualizar</button>
-            <button onclick="handleDeleteItem('${item._id}')">Eliminar</button>
-        `;
+
+        // Forma moderna y segura de crear botones y asignar eventos
+        const updateBtn = document.createElement('button');
+        updateBtn.textContent = 'Actualizar';
+        updateBtn.addEventListener('click', () => handleUpdateItem(item._id));
+
+        const deleteBtn = document.createElement('button');
+        deleteBtn.textContent = 'Eliminar';
+        deleteBtn.addEventListener('click', () => handleDeleteItem(item._id));
+
+        actionsCell.appendChild(updateBtn);
+        actionsCell.appendChild(deleteBtn);
     });
 }
 

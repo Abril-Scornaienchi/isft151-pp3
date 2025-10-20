@@ -1,4 +1,4 @@
-//userService.js
+//backend/services/userService.js
 
 const User_data = require('../models/User_data'); // Importamos el Modelo
 const Inventory = require('../models/inventoryModel');
@@ -55,7 +55,6 @@ async function findUserByCredentials(email, password) {
             username: user.username, 
             email: user.email,
             grupo: user.grupo,
-            passwordHash: user.passwordHash,
         };
     }
     

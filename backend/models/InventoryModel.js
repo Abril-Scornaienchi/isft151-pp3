@@ -1,3 +1,5 @@
+// backend/models/InventoryModel.js
+
 const mongoose = require('mongoose');
 
 const inventorySchema = new mongoose.Schema({

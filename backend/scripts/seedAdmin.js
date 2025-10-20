@@ -1,6 +1,9 @@
 // seedAdmin.js
-// Script para crear (seed) el usuario admin inicial.
 
+/**herramienta de utilidad para configurar la base de datos por primera vez 
+  (por ejemplo, si se borra o se mueve a producción)*/
+
+  
 const mongoose = require('mongoose');
 const { initializeAdminUser } = require('../services/userService');
 
