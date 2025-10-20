@@ -211,19 +211,22 @@ app.post('/api/inventario', checkAuth, async (req, res) => {
  * * @route PUT /api/inventario/:alimentoId
  */
 app.put('/api/inventario/:alimentoId', checkAuth, async (req, res) => {
-    const { quantity, unit } = req.body; 
+    // 1. Extraemos los tres campos del body
+    const { article_name, quantity, unit } = req.body; 
     const alimentoId = req.params.alimentoId;
 
-    if (!quantity || !unit) {
-        return res.status(400).json({ error: 'Faltan campos para actualizar.' });
+    // 2. Validación más flexible: al menos un campo debe estar presente
+    if (!article_name && !quantity && !unit) {
+        return res.status(400).json({ error: 'No se proporcionaron campos para actualizar.' });
     }
 
     try {
-        const updated = await userService.updateAlimento(alimentoId, req.userId, quantity, unit);
+        // 3. Pasamos los 3 campos (aunque vengan vacíos) al servicio.
+        // El servicio se encargará de manejar cuáles usar.
+        const updated = await userService.updateAlimento(alimentoId, req.userId, article_name, quantity, unit);
 
         if (!updated) {
-            // 404 si el alimento no existe O 401 si no pertenece al usuario logueado.
-            return res.status(404).json({ error: 'Alimento no encontrado o no autorizado.' }); 
+            return res.status(404).json({ error: 'Alimento no encontrado, no autorizado o sin cambios.' }); 
         }
 
         res.status(200).json({ message: 'Alimento actualizado con éxito.' });

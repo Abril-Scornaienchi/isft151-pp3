@@ -17,12 +17,14 @@
             <form id="add-item-form">
                 <h2>Agregar Ingrediente</h2>
                 <input type="text" id="article_name" placeholder="Nombre del articulo:" required>
-                <input type="number" id="quantity" placeholder="Cantidad" required>
+                <input type="number" id="quantity" placeholder="Cantidad" min =0 required>
                 <select id="unit" required>
-                    <option value="kg">Kilogramos</option>
-                    <option value="litro">Litros</option>
-                    <option value="gramo">Gramos</option>
-                    <option value="ml">Mililitros</option>
+                    <option value="" disabled selected>Seleccionar unidad:</option>
+                    <option value="gramos">Gramos</option> 
+                    <option value="kilogramos">Kilogramos</option>
+                    <option value="unidades">Unidades</option>
+                    <option value="litros">Litros</option>
+                    <option value="mililitros">Mililitros</option>
                 </select>
                 <button type="submit">Agregar al Inventario</button>
                 <button id="recordAudioBtn" type="button" class="btn-audio">

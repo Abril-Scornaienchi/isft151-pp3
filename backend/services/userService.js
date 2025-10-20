@@ -124,15 +124,36 @@ async function getAlimentosByUsuario(userId) {
 }
 
 /**
- * @brief Actualiza la cantidad y unidad de un alimento existente.
- * Aplica una doble verificación de seguridad: por ID del alimento y por ID del usuario.
- * Metodo UPDATE del CRUD de Inventario.
+ * @brief Actualiza un alimento existente.
+ * Construye dinámicamente el objeto de actualización solo con los campos proporcionados.
  */
-async function updateAlimento(alimentoId, userId, nuevaCantidad, nuevaUnidad) {
+async function updateAlimento(alimentoId, userId, nuevoNombre, nuevaCantidad, nuevaUnidad) {
+    
+    // 1. Construimos el objeto de actualización dinámicamente
+    const updateFields = {};
+    
+    if (nuevoNombre) {
+        updateFields.article_name = nuevoNombre;
+    }
+    if (nuevaCantidad) {
+        updateFields.quantity = parseInt(nuevaCantidad);
+    }
+    if (nuevaUnidad) {
+        updateFields.unit = nuevaUnidad;
+    }
+
+    // 2. Si no se proporcionó ningún campo para actualizar, no hacemos nada.
+    if (Object.keys(updateFields).length === 0) {
+        return false; //(ningún cambio = éxito)
+    }
+
+    // 3. Ejecutamos la actualización
     const result = await Inventory.updateOne(
         { _id: alimentoId, user: userId }, 
-        { $set: { quantity: parseInt(nuevaCantidad), unit: nuevaUnidad } }
+        { $set: updateFields }
     );
+    
+    // Retorna true si algo fue encontrado y modificado.
     return result.modifiedCount === 1;
 }
 

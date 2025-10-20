@@ -159,33 +159,37 @@ async function handleDeleteItem(alimentoId) {
  * @param {string} alimentoId - El ID de MongoDB del alimento que se desea actualizar.
  */
 async function handleUpdateItem(alimentoId) {
-    console.log("ID del alimento a actualizar:", alimentoId); 
-    console.log("ID del usuario (currentUserId):", currentUserId);
     
-    // 1. Pedir la nueva cantidad
-    const nuevaCantidadStr = prompt("Introduce la nueva cantidad:");
-    if (nuevaCantidadStr === null || nuevaCantidadStr.trim() === '' || isNaN(parseInt(nuevaCantidadStr))) {
-        alert("Actualización cancelada o cantidad inválida.");
-        return;
-    }
+    // 1. Obtenemos la fila (row) completa del ingrediente
+    const row = document.getElementById(`inventory-item-${alimentoId}`);
+    if (!row) return; // Seguridad por si la fila no existe
 
-    // 2. Pedir la nueva unidad
-    const unidadesValidas = ['kg', 'litro', 'gramo', 'ml'];
-    const nuevaUnidad = prompt(`Introduce la nueva unidad (${unidadesValidas.join(', ')}):`);
-    if (nuevaUnidad === null || !unidadesValidas.includes(nuevaUnidad.toLowerCase().trim())) {
-        alert("Actualización cancelada o unidad inválida.");
+    // 2. Extraemos los valores ACTUALES de la tabla para usarlos como default en los prompts
+    const nombreActual = row.cells[0].textContent;
+    const cantidadActual = row.cells[1].textContent;
+    const unidadActual = row.cells[2].textContent;
+
+    // 3. Pedimos los nuevos valores (usando los actuales como valor por defecto)
+    const nuevoNombre = prompt("Nombre del artículo:", nombreActual);
+    const nuevaCantidad = prompt("Nueva cantidad:", cantidadActual);
+    const nuevaUnidad = prompt("Nueva unidad:", unidadActual);
+
+    // 4. Si el usuario cancela CUALQUIERA de los prompts, salimos.
+    if (nuevoNombre === null || nuevaCantidad === null || nuevaUnidad === null) {
+        alert("Actualización cancelada.");
         return;
     }
 
     try {
-        // Llama a la ruta PUT
+        // 5. Llamamos a la ruta PUT con los 3 campos en el body
         const response = await fetch(`${BACKEND_URL}/inventario/${alimentoId}?userId=${currentUserId}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ 
-                quantity: nuevaCantidadStr, 
-                unit: nuevaUnidad.toLowerCase().trim() 
-            }) // Datos a actualizar
+                article_name: nuevoNombre, 
+                quantity: nuevaCantidad, 
+                unit: nuevaUnidad 
+            })
         });
 
         const result = await response.json();

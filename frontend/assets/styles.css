@@ -128,17 +128,31 @@ form label {
     font-weight: 500;
 }
 
+/* =================================================================
+ * REEMPLAZA TU BLOQUE DE ESTILOS DE FORMULARIO CON ESTE
+ * ================================================================= */
+
 form input[type="email"],
 form input[type="password"],
-form input[type="text"] {
-    width: calc(100% - 20px); /* Ajuste para padding */
+form input[type="text"],
+/* NUEVO: Añadimos el campo de número para "Cantidad" */
+form input[type="number"], 
+/* NUEVO: Añadimos el selector para "Unidad" */
+form select {
+    /* CAMBIO: Usamos 100% para que ocupe todo el espacio disponible */
+    width: 100%; 
+    /* NUEVO: Esta es la propiedad MÁS importante. Le dice al navegador que el 
+       padding y el borde deben incluirse DENTRO del width: 100%, evitando 
+       que la caja se desborde. */
+    box-sizing: border-box;
+
     padding: 12px 10px; 
     border: 1px solid #ddd;
-    border-radius: 8px; /* Bordes redondeados */
+    border-radius: 8px;
     font-size: 1em;
     color: #333;
     background-color: #f8f8f8;
-    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.08); /* Sombra interna sutil */
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.08);
     transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
 }
 

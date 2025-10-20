@@ -21,7 +21,7 @@ const inventorySchema = new mongoose.Schema({
     unit: {
         type: String,
         required: true,
-        enum: ['gramos', 'kg', 'unidades', 'litros', 'ml'] 
+        enum: ['gramos', 'kilogramos', 'unidades', 'litros', 'mililitros'] 
     },
 }, {
     timestamps: true 
