@@ -315,20 +315,21 @@ function renderRecipes(recipes) {
 }
 
 /**
- * @brief Obtiene los detalles de una receta específica y abre su URL en una nueva pestaña.
+ * @brief Obtiene los detalles de una receta específica usando el BACKEND como PROXY seguro
+ * y abre su URL en una nueva pestaña.
  * @param {number} recipeId - El ID de la receta de Spoonacular.
  */
 async function handleViewRecipeDetails(recipeId) {
-    // Clave de la API. En un proyecto real, esto no debería estar en el frontend.
-    const SPOONACULAR_API_KEY = 'dfc3580b5d694a24afedb23ca1ca8478';
-    const url = `https://api.spoonacular.com/recipes/${recipeId}/information?apiKey=${SPOONACULAR_API_KEY}`;
 
     try {
-        const response = await fetch(url);
+        // LLAMA A BACKEND: Usa tu nueva ruta /api/recetas/detalles/ (el proxy)
+        // El Backend ahora se encarga de añadir la clave API de forma secreta.
+        const response = await fetch(`${BACKEND_URL}/recetas/detalles/${recipeId}`); 
+        
         const recipeDetails = await response.json();
 
         if (!response.ok) {
-            throw new Error(recipeDetails.message || 'No se pudieron obtener los detalles de la receta.');
+            throw new Error(recipeDetails.error || 'No se pudieron obtener los detalles de la receta.');
         }
 
         // Abre la URL de la receta en una nueva pestaña
