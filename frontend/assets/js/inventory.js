@@ -283,7 +283,10 @@ function renderInventory(inventory) {
 }
 
 /**
-* @brief Muestra la lista de recetas sugeridas en la página web.
+ * @brief Muestra la lista de recetas sugeridas en la página web.
+ * Convierte el array de recetas recibido de la API externa (vía Backend) en elementos <li>.
+ * @param {Array<object>} recipes - Array de objetos de recetas encontradas (incluye título e ingredientes faltantes).
+ * @returns {void}
  */
 function renderRecipes(recipes) {
     const list = document.getElementById('recipes-list');
@@ -298,12 +301,21 @@ function renderRecipes(recipes) {
     
     recipes.forEach(recipe => {
         const li = document.createElement('li');
-        // 1. Añadimos una clase al <li> para poder estilizarlo
         li.className = 'recipe-item'; 
         
-        // 2. Creamos un HTML más limpio y estructurado
+        // Construir la lista de ingredientes faltantes
+        // Mapea el array de objetos de ingredientes faltantes para crear un texto legible.
+        const missingList = recipe.missedIngredients
+            .map(item => item.original) // Obtiene solo el nombre original del ingrediente
+            .join('\n- '); // Une los nombres con un salto de línea para el Tooltip
+
+        const tooltipText = `Faltan (${recipe.missedIngredientCount}):\n- ${missingList}`;
+
+        // Tooltip (cajita) Personalizado
         li.innerHTML = `
-            <div class="recipe-title" onclick="handleViewRecipeDetails(${recipe.id})">
+            <div class="recipe-title" 
+                 onclick="handleViewRecipeDetails(${recipe.id})" 
+                 data-tooltip="${tooltipText}"> 
                 ${recipe.title}
             </div>
             <div class="recipe-missing">
