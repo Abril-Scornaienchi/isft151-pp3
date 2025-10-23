@@ -98,7 +98,7 @@ app.use(express.json());
  */
 app.use((req, res, next) => {
     res.setHeader('Access-Control-Allow-Origin', '*'); 
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS,PATCH');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
     
     if (req.method === 'OPTIONS') {
@@ -200,10 +200,69 @@ app.post('/api/inventario', checkAuth, async (req, res) => {
     }
 
     try {
-        const nuevoAlimento = await userService.addAlimento(req.userId, article_name, quantity, unit);
+        const nuevoAlimento = await userService.createOrUpdateAlimento(req.userId, article_name, quantity, unit);
         res.status(201).json(nuevoAlimento); 
     } catch (error) {
         res.status(500).json({ error: 'Error interno al agregar alimento.' }); 
+    }
+});
+
+/**
+ * @brief Endpoint para chequear si un alimento ya existe en el inventario.
+ * * @route GET /api/inventario/check?name=pan&userId=...
+ */
+app.get('/api/inventario/check', checkAuth, async (req, res) => {
+    // Leemos el nombre del alimento desde el query parameter 'name'
+    const article_name = req.query.name; 
+
+    if (!article_name) {
+        return res.status(400).json({ error: 'Falta el nombre del alimento para chequear.' });
+    }
+
+    try {
+        // Llama al servicio para buscar el alimento por nombre
+        const existingItem = await userService.findAlimentoByName(req.userId, article_name);
+
+        if (existingItem) {
+            // Si el alimento existe, devolvemos 'exists: true' junto con el ID y cantidad.
+            return res.status(200).json({ 
+                exists: true, 
+                id: existingItem._id, // ID del alimento existente
+                quantity: existingItem.quantity,
+                unit: existingItem.unit
+            });
+        } else {
+            // Si no existe, devolvemos 'exists: false'
+            return res.status(200).json({ exists: false });
+        }
+    } catch (error) {
+        console.error('ERROR al chequear duplicado:', error);
+        res.status(500).json({ error: 'Error interno al chequear duplicado.' });
+    }
+});
+
+/**
+ * @brief Endpoint para sumar cantidad a un alimento existente.
+ * @route PATCH /api/inventario/:alimentoId/sumar
+ */
+app.patch('/api/inventario/:alimentoId/sumar', checkAuth, async (req, res) => {
+    const alimentoId = req.params.alimentoId;
+    const { quantity } = req.body; 
+
+    if (!quantity || isNaN(parseInt(quantity))) {
+        return res.status(400).json({ error: 'Falta la cantidad a sumar.' });
+    }
+
+    try {
+        const updated = await userService.sumarCantidadAlimento(alimentoId, req.userId, parseInt(quantity));
+
+        if (updated) {
+            return res.status(200).json({ message: 'Cantidad sumada con éxito.' });
+        } else {
+            return res.status(404).json({ error: 'Alimento no encontrado o no pertenece al usuario.' });
+        }
+    } catch (error) {
+        res.status(500).json({ error: 'Error interno al sumar cantidad.' });
     }
 });
 
@@ -331,7 +390,9 @@ app.listen(PORT, () => {
   console.log(`  - POST /api/register (Registro)`);
   console.log(`  - POST /api/login    (Login)`);
   console.log(`  - POST /api/inventario       (Crear Alimento)`);
+  console.log(`  - GET /api/inventario/check (Chequear si Alimento existe)`);
   console.log(`  - GET /api/inventario        (Listar Inventario)`);
+  console.log(`  - PATCH /api/inventario/:id/sumar (Sumar Cantidad)`);
   console.log(`  - PUT /api/inventario/:id    (Actualizar Alimento)`);
   console.log(`  - DELETE /api/inventario/:id (Eliminar Alimento)`);
   console.log(`  - GET /api/recetas/inventario (Buscar Recetas por Inventario)`);

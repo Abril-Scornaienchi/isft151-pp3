@@ -91,35 +91,81 @@ async function handleAddItem(event) {
 }
 
 /**
- * @brief Función auxiliar encargada de la comunicación directa con el endpoint POST de creación.
- * Recibe los datos de un artículo de forma manual o por voz
- * y realiza la petición HTTP al Backend para el registro en la base de datos.
+ * @brief Funcion auxiliar encargada de la comunicacion directa con el endpoint POST de creacion.
+ * Recibe los datos de un artículo, chequea si existe un duplicado en el Backend
+ * y pregunta al usuario como proceder (Sumar o Reemplazar).
  * @param {string} article_name - Nombre del artículo a registrar.
  * @param {string} quantity - Cantidad del artículo.
  * @param {string} unit - Unidad de medida del artículo.
- * @returns {Promise<object>} Objeto con 'success' y 'message' indicando el resultado de la operación.
+ * @returns {Promise<object>} Objeto con 'success' y 'message' indicando el resultado de la operacion.
  */
 async function sendItemToBackend(article_name, quantity, unit) {
-    try {
-        const response = await fetch(`${BACKEND_URL}/inventario?userId=${currentUserId}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ article_name, quantity, unit }) 
-        });
-        
-        const result = await response.json();
+    
+    // Limpieza y normalización de datos
+    const cleanArticleName = article_name ? article_name.toLowerCase().trim() : '';
+    const parsedQuantity = parseInt(quantity);
 
-        if (!response.ok) {
-             throw new Error(result.error || 'Error al guardar el alimento.');
+    if (!cleanArticleName || isNaN(parsedQuantity) || parsedQuantity <= 0) {
+        return { success: false, message: 'El nombre o la cantidad son inválidos.' };
+    }
+
+    try {
+        let finalResponse;
+        let finalAction;
+
+        // CHEQUEO DE DUPLICADOS
+        const checkUrl = `${BACKEND_URL}/inventario/check?name=${cleanArticleName}&userId=${currentUserId}`;
+        const checkResponse = await fetch(checkUrl);
+        const checkData = await checkResponse.json();
+
+        if (checkResponse.ok && checkData.exists) {
+            // DUPLICADO ENCONTRADO: Preguntar
+            const action = confirm(`El alimento "${cleanArticleName}" ya existe (Cant: ${checkData.quantity} ${checkData.unit}). ¿Deseas SUMAR la nueva cantidad (${parsedQuantity} ${unit})? \n\n[Aceptar] para Sumar\n[Cancelar] para Reemplazar y cambiar la unidad`);
+            
+            const existingId = checkData.id; 
+
+            if (action) {
+                // SUMAR (Llamar al PATCH)
+                finalAction = 'Sumar';
+                const patchUrl = `${BACKEND_URL}/inventario/${existingId}/sumar?userId=${currentUserId}`;
+                finalResponse = await fetch(patchUrl, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ quantity: parsedQuantity })
+                });
+
+            } else {
+                // REEMPLAZAR (Llamar al PUT)
+                finalAction = 'Reemplazar';
+                const putUrl = `${BACKEND_URL}/inventario/${existingId}?userId=${currentUserId}`;
+                 finalResponse = await fetch(putUrl, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ quantity: parsedQuantity, unit: unit, article_name: cleanArticleName })
+                });
+            }
+            
+        } else {
+            // NO EXISTE: Logica de Creación (POST original)
+            finalAction = 'Crear';
+            finalResponse = await fetch(`${BACKEND_URL}/inventario?userId=${currentUserId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ article_name: cleanArticleName, quantity: parsedQuantity, unit: unit })
+            });
         }
 
-        loadInventory(); 
-        // Si fue el formulario manual, queremos resetearlo. Si fue voz, no importa.
-        const form = document.getElementById('add-item-form');
-        if (form) form.reset(); 
-        
-        // Retornar éxito o un mensaje si es necesario
-        return { success: true, message: 'Ingrediente guardado con éxito.' };
+        // --- MANEJO DE RESPUESTA FINAL ---
+        const result = await finalResponse.json();
+
+        if (!finalResponse.ok) {
+            throw new Error(result.error || `Error al ejecutar la acción: ${finalAction}.`);
+        }
+
+        // Si fue exitoso, recarga la lista y limpia el formulario
+        loadInventory();
+        document.getElementById('add-item-form').reset();
+        return { success: true, message: `Operación (${finalAction}) completada con éxito.` };
 
     } catch (error) {
         console.error('Fallo al agregar:', error.message);
@@ -127,8 +173,6 @@ async function sendItemToBackend(article_name, quantity, unit) {
         return { success: false, message: error.message };
     }
 }
-
-
 /**
 * @brief Maneja la solicitud de eliminación de un alimento.
 * Llama al endpoint DELETE del Back, pasando el ID del alimento y el ID del usuario

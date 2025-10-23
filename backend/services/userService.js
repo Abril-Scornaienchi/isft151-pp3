@@ -100,16 +100,54 @@ async function registerUser(username, email, password) {
 // -------------------------------------------------------------------
 // FUNCIONES DEL CRUD DE INVENTARIO
 // -------------------------------------------------------------------
+/**
+ * @brief Busca un alimento por nombre y usuario.
+ * @returns {object | null} El alimento existente o null.
+ */
+async function findAlimentoByName(userId, article_name) {
+    // Convierte el nombre a minúsculas y elimina espacios para una búsqueda más robusta
+    const cleanName = article_name.toLowerCase().trim();
+    
+    // Busca en la DB donde coincidan el usuario y el nombre limpio
+    return await Inventory.findOne({ 
+        user: userId, 
+        article_name: cleanName 
+    });
+}
 
 /**
- * @brief Crea y guarda un nuevo registro de alimento en la base de datos.
- * Metodo CREATE del CRUD de Inventario.
+ * @brief Crea un nuevo registro o actualiza la cantidad de uno existente.
  */
-async function addAlimento(userId, article_name, quantity, unit) {
+async function createOrUpdateAlimento(userId, article_name, quantity, unit) {
+    const cleanName = article_name.toLowerCase().trim();
+    const parsedQuantity = parseInt(quantity);
+    
+    // 1. BUSCAR: Ver si el alimento ya existe para este usuario
+    const existingAlimento = await findAlimentoByName(userId, cleanName);
+
+    if (existingAlimento) {
+        // 2. ACTUALIZAR SI EXISTE: Si se encuentra, sumamos la nueva cantidad.
+        // Asumimos que quieres SUMAR la cantidad, ya que preguntar al Backend es complejo.
+        const newQuantity = existingAlimento.quantity + parsedQuantity;
+        
+        // Ejecutamos la actualización directamente en la DB
+        const result = await Inventory.updateOne(
+            { _id: existingAlimento._id, user: userId },
+            { $set: { quantity: newQuantity, unit: unit, article_name: cleanName } }
+        );
+        
+        if (result.modifiedCount === 1) {
+             // Retornamos el objeto con la nueva cantidad
+             return { ...existingAlimento.toObject(), quantity: newQuantity }; 
+        }
+        return existingAlimento; // Si no hubo cambios, retornamos el original
+    }
+
+    // 3. CREAR SI NO EXISTE: Si no se encuentra, creamos el nuevo alimento.
     const nuevoAlimento = await Inventory.create({
         user: userId, 
-        article_name,
-        quantity: parseInt(quantity),
+        article_name: cleanName,
+        quantity: parsedQuantity,
         unit
     });
     return nuevoAlimento;
@@ -121,6 +159,20 @@ async function addAlimento(userId, article_name, quantity, unit) {
  */
 async function getAlimentosByUsuario(userId) {
     return await Inventory.find({ user: userId });
+}
+
+/**
+ * @brief Suma una cantidad a un alimento existente usando un operador de MongoDB.
+ */
+async function sumarCantidadAlimento(alimentoId, userId, cantidadASumar) {
+    // Usamos $inc (increment) de MongoDB, que es el método más seguro para sumar valores.
+    const result = await Inventory.updateOne(
+        { _id: alimentoId, user: userId },
+        { $inc: { quantity: cantidadASumar } }
+    );
+    
+    // Retorna true si un documento fue modificado.
+    return result.modifiedCount === 1;
 }
 
 /**
@@ -170,8 +222,10 @@ module.exports = {
     findUserByCredentials,
     registerUser,
     initializeAdminUser,
-    addAlimento, 
+    findAlimentoByName,
+    createOrUpdateAlimento, 
     getAlimentosByUsuario, 
+    sumarCantidadAlimento,
     updateAlimento, 
     deleteAlimento, 
 };
