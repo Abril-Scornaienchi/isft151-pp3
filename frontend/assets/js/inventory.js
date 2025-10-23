@@ -362,6 +362,22 @@ document.addEventListener('DOMContentLoaded', initHome);
 // IMPLEMENTACION DE INGRESO POR VOZ (SPEECH)
 // ======================================================
 //
+/**
+ * @brief Normaliza el nombre de la unidad transcrita para que coincida con los valores ENUM de Mongoose.
+ * @param {string} unit - La unidad obtenida de la transcripción de voz.
+ * @returns {string} La unidad ('kilogramos', 'mililitros', etc.).
+ */
+function normalizeUnit(unit) {
+    const u = unit.toLowerCase().trim();
+    if (u.startsWith('kilo') || u.startsWith('kg')) return 'kilogramos';
+    if (u.includes('gramo') || u.includes('gr')) return 'gramos';    
+    if (u.startsWith('litro') || u.startsWith('lt')) return 'litros';
+    if (u.startsWith('mililitro') || u.startsWith('ml')) return 'mililitros';
+    if (u.startsWith('unida') || u.startsWith('unidad')) return 'unidades';
+    
+    // Si no se encuentra coincidencia, usamos un valor seguro que exista en el ENUM (evita el Error 500)
+    return 'unidades'; 
+}
 
 /**
  * @brief Se encarga de inicializar el sistema de reconocimiento de voz y conectar el boton
@@ -413,12 +429,25 @@ function setupAudioInput() {
         const quantityUnit = parts[0].trim().split(' ');
         
         let quantity = '1';
-        let unit = 'unidad';
+        let unit = 'unidades'; 
 
         if (quantityUnit.length >= 2) {
              quantity = quantityUnit[0].trim();
              unit = quantityUnit.slice(1).join(' ').trim(); 
         }
+
+        const parsedNum = parseInt(quantity); 
+        
+        if (isNaN(parsedNum) || parsedNum <= 0) {
+            // Si es texto (ej: dos) o inválido, lo forzamos a 1.
+            quantity = '1'; 
+        } else {
+            // Si es un número válido (ej: 2, lo usamos.
+            quantity = parsedNum.toString(); 
+        }
+
+        // Normalizar Unidad
+        unit = normalizeUnit(unit); 
 
         speechResultDisplay.innerText = `✔️ Procesando: ${quantity} ${unit} de ${articleName}`;
         speechResultDisplay.style.color = 'green';
