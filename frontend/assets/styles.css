@@ -358,3 +358,46 @@ form button[type="submit"]:hover {
 .inventory-table td button:last-of-type:hover {
     background: linear-gradient(135deg, #f86a48 0%, #c02267 100%); /* Degradado más intenso para el hover */
 }
+
+/* =================================================================
+ * 8. ESTILOS PARA TOOLTIP PERSONALIZADO (Ingredientes Faltantes)
+ * ================================================================= */
+
+/* Contenedor del título que mostrará el tooltip */
+[data-tooltip] {
+    position: relative; /* Es la referencia para posicionar el tooltip */
+}
+
+[data-tooltip]::after {
+    content: attr(data-tooltip);
+    
+    /* Posicionamiento y Visibilidad */
+    position: absolute;
+    bottom: 100%; /* Coloca el tooltip justo encima del elemento */
+    left: 50%;
+    transform: translateX(-50%) translateY(-10px); /* Centra horizontalmente */
+    opacity: 0; /* Oculto por defecto */
+    visibility: hidden;
+    pointer-events: none; /* Asegura que no interfiera con clics */
+    transition: opacity 0.2s ease-in-out, transform 0.2s ease-in-out;
+
+    white-space: pre-wrap;
+    background-color: #4a4a4a; /* Fondo oscuro o color de tu preferencia */
+    color: white; /* Texto blanco */
+    font-size: 0.85em;
+    padding: 10px 15px;
+    border-radius: 8px; /* Bordes redondeados como el contenedor */
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    width: auto;
+    min-width: 180px; /* Ancho mínimo para que se vea bien */
+    max-width: 300px;
+    z-index: 1000; /* Asegura que esté por encima de otros elementos */
+    text-align: left;
+}
+
+/* El tooltip se muestra cuando el mouse está sobre el elemento */
+[data-tooltip]:hover::after {
+    visibility: visible;
+    opacity: 1; /* Transición suave de aparición */
+    transform: translateX(-50%) translateY(0); /* Lo mueve ligeramente hacia abajo */
+}

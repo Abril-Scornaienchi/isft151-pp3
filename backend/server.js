@@ -24,6 +24,8 @@ Lo crucial: Este archivo **coordina** la aplicación, pero el módulo 'userServi
  * delegando la lógica de negocio y persistencia al módulo userService.
  */
 
+// Carga las variables de entorno del archivo .env
+require('dotenv').config();
 // 1. IMPORTACIONES Y CONFIGURACIÓN INICIAL
 const express = require('express');
 // Importamos el módulo de servicio (nuestra lógica de negocio encapsulada)
@@ -33,7 +35,7 @@ const mongoose = require('mongoose');
 const app = express();
 const PORT = 3000;
 
-const DB_URI = 'mongodb+srv://adminUserA:rzVBpgvkVWCmcMBQ@cluster0.ysdsjmm.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0'; 
+const DB_URI = process.env.MONGO_URI;
 
 mongoose.connect(DB_URI)
     .then(() => console.log('✅ Conexión exitosa a MongoDB.'))
@@ -42,7 +44,7 @@ mongoose.connect(DB_URI)
     });
 
 
-const SPOONACULAR_API_KEY = 'dfc3580b5d694a24afedb23ca1ca8478'; 
+const SPOONACULAR_API_KEY = process.env.SPOONACULAR_API_KEY;
 
 const User_data = require('./models/User_data'); 
 
@@ -282,6 +284,35 @@ app.get('/api/recetas/inventario', checkAuth, async (req, res) => {
     }
 });
 
+
+// BUSCAR DETALLES DE RECETA (PROXY SEGURO)
+/**
+ * @brief Endpoint para obtener los detalles de una receta específica usando el Backend como proxy seguro.
+ * @route GET /api/recetas/detalles/:recipeId
+ */
+app.get('/api/recetas/detalles/:recipeId', async (req, res) => {
+    const recipeId = req.params.recipeId;
+    
+    try {
+        // La clave API se lee del entorno del servidor (seguro)
+        const url = `https://api.spoonacular.com/recipes/${recipeId}/information?apiKey=${SPOONACULAR_API_KEY}`;
+        
+        const respuesta = await fetch(url);
+        const data = await respuesta.json();
+        
+        if (!respuesta.ok) {
+            // Reenviar el error si Spoonacular falla (ej: receta no existe)
+            return res.status(respuesta.status).json({ error: 'Error de la API externa al obtener detalles.', details: data.message });
+        }
+
+        res.status(200).json(data); 
+
+    } catch (error) {
+        // Manejo de errores de red o internos del servidor
+        res.status(500).json({ error: 'Error interno del servidor al buscar detalles de receta.', details: error.message });
+    }
+});
+
 /**
  * @brief Endpoint de Bienvenida.
  * * @route GET /
@@ -304,5 +335,6 @@ app.listen(PORT, () => {
   console.log(`  - PUT /api/inventario/:id    (Actualizar Alimento)`);
   console.log(`  - DELETE /api/inventario/:id (Eliminar Alimento)`);
   console.log(`  - GET /api/recetas/inventario (Buscar Recetas por Inventario)`);
+  console.log(`  - GET /api/recetas/detalles/:id (PROXY: Detalles de Receta)`);
   console.log(`\n`);
 });
