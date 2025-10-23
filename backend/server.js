@@ -32,18 +32,9 @@ const express = require('express');
 const userService = require('./services/userService'); 
 const mongoose = require('mongoose');
 
-const app = express();
-const PORT = 3000;
-
 const DB_URI = process.env.MONGO_URI;
-
-mongoose.connect(DB_URI)
-    .then(() => console.log('✅ Conexión exitosa a MongoDB.'))
-    .catch(err => {
-        console.error('❌ Error de conexión a MongoDB:', err.message);
-    });
-
-
+const PORT = process.env.PORT || 3000;
+const app = express();
 const SPOONACULAR_API_KEY = process.env.SPOONACULAR_API_KEY;
 
 const User_data = require('./models/User_data'); 
@@ -380,22 +371,32 @@ app.get('/', (req, res) => {
     res.status(200).send('<h1>API de Recetas Activa</h1><p>Los endpoints de autenticación son POST /api/register y POST /api/login</p>');
 });
 
-// 4. INICIO DEL SERVIDOR
-app.listen(PORT, () => {
-  console.log(`\n==============================================`);
-  console.log(` SERVIDOR BACKEND INICIADO`);
-  console.log(`Puerto: http://localhost:${PORT}`);
-  console.log(`==============================================`);
-  console.log(`Rutas disponibles:`);
-  console.log(`  - POST /api/register (Registro)`);
-  console.log(`  - POST /api/login    (Login)`);
-  console.log(`  - POST /api/inventario       (Crear Alimento)`);
-  console.log(`  - GET /api/inventario/check (Chequear si Alimento existe)`);
-  console.log(`  - GET /api/inventario        (Listar Inventario)`);
-  console.log(`  - PATCH /api/inventario/:id/sumar (Sumar Cantidad)`);
-  console.log(`  - PUT /api/inventario/:id    (Actualizar Alimento)`);
-  console.log(`  - DELETE /api/inventario/:id (Eliminar Alimento)`);
-  console.log(`  - GET /api/recetas/inventario (Buscar Recetas por Inventario)`);
-  console.log(`  - GET /api/recetas/detalles/:id (PROXY: Detalles de Receta)`);
-  console.log(`\n`);
-});
+// 4. INICIO DEL SERVIDOR (Método robusto)
+mongoose.connect(DB_URI)
+    .then(() => {
+        console.log('✅ Conexión exitosa a MongoDB.');
+        
+        // Inicia el servidor Express SOLO si la conexión a la DB es exitosa
+        app.listen(PORT, () => {
+            console.log(`\n==============================================`);
+            console.log(` SERVIDOR BACKEND INICIADO`);
+            console.log(`Puerto: http://localhost:${PORT}`);
+            console.log(`==============================================`);
+            console.log(`Rutas disponibles:`);
+            console.log(`  - POST /api/register (Registro)`);
+            console.log(`  - POST /api/login    (Login)`);
+            console.log(`  - POST /api/inventario       (Crear Alimento)`);
+            console.log(`  - GET /api/inventario/check (Chequear si Alimento existe)`);
+            console.log(`  - GET /api/inventario        (Listar Inventario)`);
+            console.log(`  - PATCH /api/inventario/:id/sumar (Sumar Cantidad)`);
+            console.log(`  - PUT /api/inventario/:id    (Actualizar Alimento)`);
+            console.log(`  - DELETE /api/inventario/:id (Eliminar Alimento)`);
+            console.log(`  - GET /api/recetas/inventario (Buscar Recetas por Inventario)`);
+            console.log(`  - GET /api/recetas/detalles/:id (PROXY: Detalles de Receta)`);
+            console.log(`\n`);
+        });
+    })
+    .catch(err => {
+        console.error('❌ Error de conexión a MongoDB:', err.message);
+        process.exit(1); // Detiene la aplicación si no se puede conectar a la DB
+    });

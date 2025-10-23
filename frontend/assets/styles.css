@@ -177,12 +177,27 @@ form button[type="submit"]:hover {
     box-shadow: 0 6px 15px rgba(0, 123, 255, 0.3);
 }
 
+
+/* Envoltorio para centrar el formulario de 'Agregar Ingrediente' */
+.form-wrapper {
+    max-width: 420px; 
+    margin-left: auto;
+    margin-right: auto;
+    margin-top: 30px;
+    margin-bottom: 20px;
+    border-bottom: 2px solid #f0f0f0;
+    padding-bottom: 20px;
+}
+
+
 /* =================================================================
  * 5. Estilos Específicos para Páginas (Opcional, pero útil)
  * ================================================================= */
-.home-container { /* Si queremos un estilo específico para home.html */
-    max-width: 800px; /* Más ancho para el contenido de los articulos */
-    padding: 50px;
+.home-container { 
+    /* Ocupará el x% de la pantalla, pero nunca será más ancho que 800px */
+    width: 80%; 
+    max-width: 800px;
+    padding: 40px; /* Reduje un poco el padding para que se vea mejor */
 }
 
 .home-container h1 {
@@ -273,7 +288,79 @@ form button[type="submit"]:hover {
 }
 
 /* =================================================================
- * 7. ESTILOS PARA TOOLTIP PERSONALIZADO (Ingredientes Faltantes)
+ * 7. ESTILOS PARA LA TABLA DE INVENTARIO
+ * ================================================================= */
+
+/* Contenedor de la tabla (el .section-box ya le da espacio) */
+.inventory-table {
+    width: 100%; /* Ocupa todo el ancho */
+    border-collapse: collapse; /* Une los bordes de las celdas */
+    margin-top: 20px; /* Separación del título 'Mi Inventario' */
+    font-size: 0.95em;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05); /* Sombra sutil */
+    border-radius: 8px; /* Bordes redondeados para la tabla */
+    overflow: hidden; /* Para que los bordes redondeados se vean */
+}
+
+/* Cabecera de la tabla (Nombre, Cantidad, etc.) */
+.inventory-table th {
+    background-color: #f0f4f8; /* Un fondo gris azulado claro */
+    color: #333;
+    font-weight: 600;
+    padding: 12px 15px;
+    text-align: left;
+}
+
+/* Celdas de datos */
+.inventory-table td {
+    padding: 12px 15px;
+    border-bottom: 1px solid #eee; /* Línea divisoria sutil */
+    color: #555;
+    background-color: #fff;
+    text-align: left;
+}
+
+/* Efecto hover en las filas */
+.inventory-table tbody tr:hover td {
+    background-color: #f1f5f8; /* Resalta la fila al pasar el mouse */
+}
+
+/* --- ESTILOS DE BOTONES DE ACCIÓN --- */
+
+/* Estilo base para AMBOS botones en la tabla */
+.inventory-table td button {
+    padding: 5px 10px;
+    font-size: 0.9em;
+    font-weight: 500;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin-right: 5px; /* Espacio entre botones */
+}
+
+/* Botón 'Actualizar' (el primero) */
+.inventory-table td button:first-of-type {
+    background: linear-gradient(135deg, #6c7bff 0%, #87CEEB 100%); /* Mismo degradado que 'Agregar' */
+    color: white;
+}
+
+.inventory-table td button:first-of-type:hover {
+    background: linear-gradient(135deg, #5a6eff 0%, #76bce0 100%); /* Mismo degradado hover que 'Agregar' */
+}
+
+/* Botón 'Eliminar' (el segundo) */
+.inventory-table td button:last-of-type {
+    background: linear-gradient(135deg, #ff7e5f 0%, #d62976 100%); /* Degradado de naranja-rojo a magenta, inspirado en el fondo */
+    color: white;
+}
+
+.inventory-table td button:last-of-type:hover {
+    background: linear-gradient(135deg, #f86a48 0%, #c02267 100%); /* Degradado más intenso para el hover */
+}
+
+/* =================================================================
+ * 8. ESTILOS PARA TOOLTIP PERSONALIZADO (Ingredientes Faltantes)
  * ================================================================= */
 
 /* Contenedor del título que mostrará el tooltip */

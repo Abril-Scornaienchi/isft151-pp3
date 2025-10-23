@@ -9,13 +9,14 @@
 
     </head>
 <body>
-        <div class="container">
+        <div class="container home-container">
         
         <h1>Gestión de Despensa</h1>
         
-        <div class="section-box"> 
-            <form id="add-item-form">
-                <h2>Agregar Ingrediente</h2>
+        <div class="section-box form-wrapper"> 
+                    <form id="add-item-form">
+                        <h2>Agregar Ingrediente</h2>
+
                 <input type="text" id="article_name" placeholder="Nombre del articulo:" required>
                 <input type="number" id="quantity" placeholder="Cantidad" min =0 required>
                 <select id="unit" required>
@@ -32,6 +33,7 @@
                 </button>
                 <p id="speechResult" style="margin-top: 10px; color: green;"></p>
             </form>
+      
         </div>
         
         <hr>

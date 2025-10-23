@@ -215,25 +215,35 @@ async function handleDeleteItem(alimentoId) {
  * @param {string} alimentoId - El ID de MongoDB del alimento que se desea actualizar.
  */
 async function handleUpdateItem(alimentoId) {
-    console.log("ID del alimento a eliminar:", alimentoId); 
-    console.log("ID del usuario (currentUserId):", currentUserId);
-    // 1. En un entorno simple, pedimos la nueva cantidad por un prompt
-    const nuevaCantidadStr = prompt("Introduce la nueva cantidad:");
-    
-    if (nuevaCantidadStr === null || isNaN(parseInt(nuevaCantidadStr))) {
-        alert("Actualización cancelada o cantidad inválida.");
+    // 1. Obtenemos la fila (row) completa del ingrediente
+    const row = document.getElementById(`inventory-item-${alimentoId}`);
+    if (!row) return; // Seguridad por si la fila no existe
+
+    // 2. Extraemos los valores ACTUALES de la tabla
+    const nombreActual = row.cells[0].textContent;
+    const cantidadActual = row.cells[1].textContent;
+    const unidadActual = row.cells[2].textContent;
+
+    // 3. Pedimos los nuevos valores (usando los actuales como valor por defecto)
+    const nuevoNombre = prompt("Nombre del artículo:", nombreActual);
+    const nuevaCantidad = prompt("Nueva cantidad:", cantidadActual);
+    const nuevaUnidad = prompt("Nueva unidad:", unidadActual);
+
+    // 4. Si el usuario cancela CUALQUIERA de los prompts, salimos.
+    if (nuevoNombre === null || nuevaCantidad === null || nuevaUnidad === null) {
+        alert("Actualización cancelada.");
         return;
     }
-    
-    // 2. Obtener la unidad del DOM
-    const unidad = document.querySelector(`#inventory-item-${alimentoId} .unit-cell`).textContent;
-
     try {
-        // Llama a la ruta PUT
+        // 5. Llamamos a la ruta PUT con los 3 campos en el body
         const response = await fetch(`${BACKEND_URL}/inventario/${alimentoId}?userId=${currentUserId}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ quantity: nuevaCantidadStr, unit: unidad }) // Datos a actualizar
+            body: JSON.stringify({
+                article_name: nuevoNombre,
+                quantity: nuevaCantidad,
+                unit: nuevaUnidad
+            })
         });
 
         const result = await response.json();
@@ -241,7 +251,7 @@ async function handleUpdateItem(alimentoId) {
         if (!response.ok) {
             throw new Error(result.error || 'Error al actualizar el alimento.');
         }
-        
+
         alert('Alimento actualizado con éxito.');
         loadInventory(); // Recarga la lista
 
@@ -250,7 +260,6 @@ async function handleUpdateItem(alimentoId) {
         alert('Fallo al actualizar: ' + error.message);
     }
 }
-
 
 // =========================================================================
 // 3. INTEGRACIÓN DE RECETAS
@@ -438,7 +447,7 @@ function setupAudioInput() {
     }
 
     const recognition = new SpeechRecognition();
-    recognition.lang = 'es-ES'; // Configurar idioma español
+    recognition.lang = 'en-US'; // Configurar idioma a inglés EE.UU.
     recognition.interimResults = false;
     recognition.maxAlternatives = 1;
 
@@ -446,8 +455,8 @@ function setupAudioInput() {
     recordBtn.addEventListener('click', () => {
         try {
             recognition.start();
-            recordBtn.innerText = "🔴 ESCUCHANDO...";
-            speechResultDisplay.innerText = "Habla ahora, di el ingrediente (Ej: 'dos kilos de papa')";
+            recordBtn.innerText = "🔴 LISTENING...";
+            speechResultDisplay.innerText = "Speak now, say the ingredient (e.g., 'two kilos of potatoes')";
             speechResultDisplay.style.color = 'red';
         } catch (e) {
             console.error("Error al iniciar el reconocimiento de voz:", e);
@@ -461,22 +470,22 @@ function setupAudioInput() {
         recordBtn.innerText = "🎙️ Ingreso por Voz";
         
         // --- LÓGICA DE PARSEADO SIMPLE ---
-        const parts = transcript.split(' de ');
+        const parts = transcript.toLowerCase().split(' of ');
         
         if (parts.length < 2) {
-            speechResultDisplay.innerText = `Transcripción: "${transcript}" (Error: Intenta: 'Cantidad UNIDAD de Articulo')`;
+            speechResultDisplay.innerText = `Transcript: "${transcript}" (Error: Try: 'Quantity UNIT of Item')`;
             speechResultDisplay.style.color = 'orange';
             return;
         }
 
-        const articleName = parts[1].trim(); 
+        const articleName = parts[1].trim();
         const quantityUnit = parts[0].trim().split(' ');
         
         let quantity = '1';
-        let unit = 'unidades'; 
+        let unit = 'units'; // 'unidad' en inglés
 
         if (quantityUnit.length >= 2) {
-             quantity = quantityUnit[0].trim();
+             quantity = quantityUnit[0].trim(); // 'two'
              unit = quantityUnit.slice(1).join(' ').trim(); 
         }
 
@@ -500,7 +509,7 @@ function setupAudioInput() {
         const result = await sendItemToBackend(articleName, quantity, unit);
 
         if (result.success) {
-            speechResultDisplay.innerText = `✅ Guardado: ${quantity} ${unit} de ${articleName}`;
+            speechResultDisplay.innerText = `✅ Saved: ${quantity} ${unit} of ${articleName}`;
         } else {
             speechResultDisplay.innerText = `❌ Error al guardar: ${result.message}`;
         }
@@ -512,7 +521,7 @@ function setupAudioInput() {
     });
     
     recognition.addEventListener('error', (event) => {
-        speechResultDisplay.innerText = `Error de voz: ${event.error}. Vuelve a intentarlo.`;
+        speechResultDisplay.innerText = `Speech error: ${event.error}. Please try again.`;
         speechResultDisplay.style.color = 'red';
         recordBtn.innerText = "🎙️ Ingreso por Voz";
     });
