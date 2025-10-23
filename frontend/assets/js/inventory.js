@@ -365,7 +365,7 @@ function setupAudioInput() {
     }
 
     const recognition = new SpeechRecognition();
-    recognition.lang = 'es-ES'; // Configurar idioma español
+    recognition.lang = 'en-US'; // Configurar idioma a inglés EE.UU.
     recognition.interimResults = false;
     recognition.maxAlternatives = 1;
 
@@ -373,8 +373,8 @@ function setupAudioInput() {
     recordBtn.addEventListener('click', () => {
         try {
             recognition.start();
-            recordBtn.innerText = "🔴 ESCUCHANDO...";
-            speechResultDisplay.innerText = "Habla ahora, di el ingrediente (Ej: 'dos kilos de papa')";
+            recordBtn.innerText = "🔴 LISTENING...";
+            speechResultDisplay.innerText = "Speak now, say the ingredient (e.g., 'two kilos of potatoes')";
             speechResultDisplay.style.color = 'red';
         } catch (e) {
             console.error("Error al iniciar el reconocimiento de voz:", e);
@@ -388,22 +388,22 @@ function setupAudioInput() {
         recordBtn.innerText = "🎙️ Ingreso por Voz";
         
         // --- LÓGICA DE PARSEADO SIMPLE ---
-        const parts = transcript.split(' de ');
+        const parts = transcript.toLowerCase().split(' of ');
         
         if (parts.length < 2) {
-            speechResultDisplay.innerText = `Transcripción: "${transcript}" (Error: Intenta: 'Cantidad UNIDAD de Articulo')`;
+            speechResultDisplay.innerText = `Transcript: "${transcript}" (Error: Try: 'Quantity UNIT of Item')`;
             speechResultDisplay.style.color = 'orange';
             return;
         }
 
-        const articleName = parts[1].trim(); 
+        const articleName = parts[1].trim();
         const quantityUnit = parts[0].trim().split(' ');
         
         let quantity = '1';
-        let unit = 'unidad';
+        let unit = 'units'; // 'unidad' en inglés
 
         if (quantityUnit.length >= 2) {
-             quantity = quantityUnit[0].trim();
+             quantity = quantityUnit[0].trim(); // 'two'
              unit = quantityUnit.slice(1).join(' ').trim(); 
         }
 
@@ -414,7 +414,7 @@ function setupAudioInput() {
         const result = await sendItemToBackend(articleName, quantity, unit);
 
         if (result.success) {
-            speechResultDisplay.innerText = `✅ Guardado: ${quantity} ${unit} de ${articleName}`;
+            speechResultDisplay.innerText = `✅ Saved: ${quantity} ${unit} of ${articleName}`;
         } else {
             speechResultDisplay.innerText = `❌ Error al guardar: ${result.message}`;
         }
@@ -426,7 +426,7 @@ function setupAudioInput() {
     });
     
     recognition.addEventListener('error', (event) => {
-        speechResultDisplay.innerText = `Error de voz: ${event.error}. Vuelve a intentarlo.`;
+        speechResultDisplay.innerText = `Speech error: ${event.error}. Please try again.`;
         speechResultDisplay.style.color = 'red';
         recordBtn.innerText = "🎙️ Ingreso por Voz";
     });
