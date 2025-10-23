@@ -171,25 +171,35 @@ async function handleDeleteItem(alimentoId) {
  * @param {string} alimentoId - El ID de MongoDB del alimento que se desea actualizar.
  */
 async function handleUpdateItem(alimentoId) {
-    console.log("ID del alimento a eliminar:", alimentoId); 
-    console.log("ID del usuario (currentUserId):", currentUserId);
-    // 1. En un entorno simple, pedimos la nueva cantidad por un prompt
-    const nuevaCantidadStr = prompt("Introduce la nueva cantidad:");
-    
-    if (nuevaCantidadStr === null || isNaN(parseInt(nuevaCantidadStr))) {
-        alert("Actualización cancelada o cantidad inválida.");
+    // 1. Obtenemos la fila (row) completa del ingrediente
+    const row = document.getElementById(`inventory-item-${alimentoId}`);
+    if (!row) return; // Seguridad por si la fila no existe
+
+    // 2. Extraemos los valores ACTUALES de la tabla
+    const nombreActual = row.cells[0].textContent;
+    const cantidadActual = row.cells[1].textContent;
+    const unidadActual = row.cells[2].textContent;
+
+    // 3. Pedimos los nuevos valores (usando los actuales como valor por defecto)
+    const nuevoNombre = prompt("Nombre del artículo:", nombreActual);
+    const nuevaCantidad = prompt("Nueva cantidad:", cantidadActual);
+    const nuevaUnidad = prompt("Nueva unidad:", unidadActual);
+
+    // 4. Si el usuario cancela CUALQUIERA de los prompts, salimos.
+    if (nuevoNombre === null || nuevaCantidad === null || nuevaUnidad === null) {
+        alert("Actualización cancelada.");
         return;
     }
-    
-    // 2. Obtener la unidad del DOM
-    const unidad = document.querySelector(`#inventory-item-${alimentoId} .unit-cell`).textContent;
-
     try {
-        // Llama a la ruta PUT
+        // 5. Llamamos a la ruta PUT con los 3 campos en el body
         const response = await fetch(`${BACKEND_URL}/inventario/${alimentoId}?userId=${currentUserId}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ quantity: nuevaCantidadStr, unit: unidad }) // Datos a actualizar
+            body: JSON.stringify({
+                article_name: nuevoNombre,
+                quantity: nuevaCantidad,
+                unit: nuevaUnidad
+            })
         });
 
         const result = await response.json();
@@ -197,7 +207,7 @@ async function handleUpdateItem(alimentoId) {
         if (!response.ok) {
             throw new Error(result.error || 'Error al actualizar el alimento.');
         }
-        
+
         alert('Alimento actualizado con éxito.');
         loadInventory(); // Recarga la lista
 
@@ -206,7 +216,6 @@ async function handleUpdateItem(alimentoId) {
         alert('Fallo al actualizar: ' + error.message);
     }
 }
-
 
 // =========================================================================
 // 3. INTEGRACIÓN DE RECETAS
