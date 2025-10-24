@@ -189,15 +189,31 @@ form button[type="submit"]:hover {
     padding-bottom: 20px;
 }
 
+/* CUANDO la vista de recetas está activa... */
+.home-container.recipe-view-active .form-wrapper {
+    /* ...quitamos el centrado automático... */
+    margin-left: 0; 
+    margin-right: 0;
+    /* ...y podemos quitarle el ancho máximo si quieres que ocupe todo el espacio izquierdo */
+    /* max-width: none; */ /* Descomenta esta línea si quieres que se ensanche */
+}
+
 
 /* =================================================================
  * 5. Estilos Específicos para Páginas (Opcional, pero útil)
  * ================================================================= */
 .home-container { 
-    /* Ocupará el x% de la pantalla, pero nunca será más ancho que 800px */
-    width: 80%; 
-    max-width: 800px;
-    padding: 40px; /* Reduje un poco el padding para que se vea mejor */
+    /* Quitamos display: flex; para que sea una columna por defecto */
+    
+    /* Mantenemos el ancho flexible, centrado */
+    width: 90%;            
+    max-width: 800px;     /* Volvemos al ancho original para la vista inicial */
+    padding: 40px; 
+    margin-left: auto;
+    margin-right: auto;
+    
+    /* Añadimos transición para cuando cambie a flex */
+    transition: max-width 0.5s ease-in-out; 
 }
 
 .home-container h1 {
@@ -364,11 +380,12 @@ form button[type="submit"]:hover {
  * ================================================================= */
 
 /* Contenedor del título que mostrará el tooltip */
-[data-tooltip] {
+/* Ahora se aplica a la tarjeta de receta completa */
+.recipe-card[data-tooltip] {
     position: relative; /* Es la referencia para posicionar el tooltip */
 }
 
-[data-tooltip]::after {
+.recipe-card[data-tooltip]::after {
     content: attr(data-tooltip);
     
     /* Posicionamiento y Visibilidad */
@@ -396,8 +413,105 @@ form button[type="submit"]:hover {
 }
 
 /* El tooltip se muestra cuando el mouse está sobre el elemento */
-[data-tooltip]:hover::after {
+.recipe-card[data-tooltip]:hover::after {
     visibility: visible;
     opacity: 1; /* Transición suave de aparición */
     transform: translateX(-50%) translateY(0); /* Lo mueve ligeramente hacia abajo */
+}
+
+/* =================================================================
+ * 9. ESTILOS DEL LAYOUT (DOS COLUMNAS) Y TARJETAS DE RECETA
+ * ================================================================= */
+
+/* 2. Columna Izquierda (Inventario) - Estilos por defecto */
+#main-content {
+    width: 100%; /* Ocupa todo el ancho por defecto */
+    box-sizing: border-box;
+    transition: all 0.5s ease-in-out; 
+}
+
+/* 3. Columna Derecha (Recetas) - OCULTA COMPLETAMENTE POR DEFECTO */
+#recipe-panel {
+    display: none; /* Totalmente oculta y no ocupa espacio */
+    flex-basis: 0%; 
+    opacity: 0;
+    overflow: hidden; 
+    transition: all 0.5s ease-in-out;
+    border-left: 2px solid #f0f0f0;
+    padding-left: 0; /* Sin padding cuando está oculta */
+    box-sizing: border-box;
+    height: 90vh; 
+    overflow-y: auto;
+}
+
+
+/* El layout principal CAMBIA A FLEX y se ensancha */
+.home-container.recipe-view-active {
+    display: flex;         
+    flex-wrap: nowrap;     
+    max-width: 1200px;     /* Se ensancha para las dos columnas */
+}
+
+/* La columna izquierda SE ENCOGE */
+.home-container.recipe-view-active #main-content {
+    flex-basis: 60%; 
+    flex-shrink: 0;
+    padding-right: 30px; /* Añadimos separación */
+}
+
+/* El panel de recetas APARECE */
+.home-container.recipe-view-active #recipe-panel {
+    display: block; /* Se hace visible */
+    flex-basis: 40%; 
+    opacity: 1;
+    padding-left: 30px; /* Añadimos padding */
+}
+
+
+/* 5. Estilo del CONTENEDOR de las tarjetas */
+#recipes-list-cards {
+    display: grid;
+    /* responsive grid: crea tantas columnas como quepan, 
+     * donde cada una mide MÍNIMO 150px pero puede crecer (1fr)
+     */
+    /* 1. Aumentamos el mínimo para que sea más difícil crear 2 columnas */
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); 
+    gap: 15px; /* Espacio entre tarjetas */
+    
+    /* 2. Hacemos que la cuadrícula ocupe toda la altura del panel */
+    height: 100%; 
+    
+    /* 3. (Opcional) Alinea las tarjetas arriba si sobra espacio vertical */
+    align-content: start; 
+}
+
+/* 6. Estilo de CADA TARJETA individual */
+.recipe-card {
+    background-color: #fff;
+    border: 1px solid #eee;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.08);
+    overflow: hidden; /* Para que la imagen no se salga */
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+}
+.recipe-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.12);
+}
+
+.recipe-card img {
+    width: 100%;
+    height: 150px; /* Altura fija para la imagen */
+    object-fit: cover; /* Recorta la imagen para que encaje */
+    display: block; /* Evita espacios extra debajo de la imagen */
+}
+
+.recipe-card h3 {
+    font-size: 1em;
+    font-weight: 600;
+    padding: 10px 15px;
+    margin: 0;
+    color: #333;
+    text-align: left; /* Alinea el título a la izquierda */
 }
