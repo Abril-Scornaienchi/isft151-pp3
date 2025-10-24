@@ -200,16 +200,16 @@ form button[type="submit"]:hover {
 
 
 /* =================================================================
- * 5. Estilos Específicos para Páginas (Opcional, pero útil)
+ * 5. Estilos Específicos para Páginas
  * ================================================================= */
 .home-container { 
     /* Quitamos width: 90% para que el max-width sea el principal */
-    max-width: 960px;     /* Ancho máximo inicial (un poco más grande) */
+    max-width: 960px;     /* Ancho máximo inicial */
     width: 100%;           /* Ocupa el 100% HASTA el max-width */
     padding: 40px; 
     margin-left: auto;
     margin-right: auto;
-    box-sizing: border-box; /* Importante añadir esto */
+    box-sizing: border-box;
     
     /* Añadimos transición para cuando cambie a flex */
     transition: max-width 0.5s ease-in-out; 
@@ -512,4 +512,86 @@ form button[type="submit"]:hover {
     margin: 0;
     color: #333;
     text-align: left; /* Alinea el título a la izquierda */
+}
+
+/* =================================================================
+ * 10. ESTILOS PARA EL MODAL DE DETALLES DE RECETA
+ * ================================================================= */
+
+/* 1. El fondo oscuro semitransparente (Overlay) */
+.modal-overlay {
+    display: none; /* Oculto por defecto */
+    position: fixed; /* Se queda fijo aunque hagas scroll */
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7); /* Fondo negro con 70% opacidad */
+    z-index: 1000; /* Asegura que esté por encima de todo */
+    justify-content: center; /* Centra el contenido horizontalmente */
+    align-items: center; /* Centra el contenido verticalmente */
+}
+
+/* 2. Clase para MOSTRAR el modal (se añade/quita con JS) */
+.modal-overlay.show {
+    display: flex; /* Cambia a flex para mostrar y centrar */
+}
+
+/* 3. La caja blanca del contenido del modal */
+.modal-content {
+    background-color: #fff;
+    padding: 30px;
+    border-radius: 10px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    position: relative; /* Para posicionar el botón de cierre */
+    width: 90%;
+    max-width: 700px; /* Ancho máximo del modal */
+    max-height: 85vh; /* Altura máxima, para que no ocupe toda la pantalla */
+    overflow-y: auto; /* Añade scroll si el contenido es muy largo */
+}
+
+/* 4. El botón de cierre (la "X") */
+.modal-close {
+    position: absolute;
+    top: 10px;
+    right: 15px;
+    background: none;
+    border: none;
+    font-size: 2.5em; /* Tamaño grande para la "X" */
+    color: #aaa;
+    cursor: pointer;
+    line-height: 1;
+}
+.modal-close:hover {
+    color: #333;
+}
+
+/* 5. Estilos para el contenido DENTRO del modal (opcional, puedes ajustar) */
+#modal-body h2 { /* Título de la receta */
+    margin-top: 0;
+    color: #333;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 10px;
+}
+
+#modal-body img { /* Imagen de la receta */
+    max-width: 100%;
+    height: auto;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+#modal-body h3 { /* Subtítulos (Ingredientes, Pasos) */
+    margin-top: 25px;
+    color: #555;
+    font-size: 1.2em;
+}
+
+#modal-body ul, #modal-body ol { /* Listas de ingredientes/pasos */
+    padding-left: 20px;
+    line-height: 1.6;
+    color: #444;
+}
+#modal-body li {
+    margin-bottom: 8px;
 }

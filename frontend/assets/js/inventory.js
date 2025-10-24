@@ -359,28 +359,60 @@ function renderRecipes(recipes) {
 }
 
 /**
- * @brief Obtiene los detalles de una receta específica usando el BACKEND como PROXY seguro
- * y abre su URL en una nueva pestaña.
- * @param {number} recipeId - El ID de la receta de Spoonacular.
+ * @brief Obtiene los detalles de una receta (vía proxy backend) y los muestra en el modal.
  */
 async function handleViewRecipeDetails(recipeId) {
+    const modal = document.getElementById('recipe-modal');
+    const modalBody = document.getElementById('modal-body');
+    
+    if (!modal || !modalBody) return; // Seguridad
+
+    // Muestra un mensaje de carga mientras busca los datos
+    modalBody.innerHTML = '<p>Cargando detalles de la receta...</p>';
+    modal.classList.add('show'); // Muestra el overlay y el modal
 
     try {
-        // LLAMA A BACKEND: Usa tu nueva ruta /api/recetas/detalles/ (el proxy)
-        // El Backend ahora se encarga de añadir la clave API de forma secreta.
+        // Llama al backend (proxy)
         const response = await fetch(`${BACKEND_URL}/recetas/detalles/${recipeId}`); 
-        
         const recipeDetails = await response.json();
 
         if (!response.ok) {
-            throw new Error(recipeDetails.error || 'No se pudieron obtener los detalles de la receta.');
+            throw new Error(recipeDetails.error || 'No se pudieron obtener los detalles.');
         }
 
-        // Abre la URL de la receta en una nueva pestaña
-        window.open(recipeDetails.sourceUrl, '_blank');
+        // Construye el HTML con los detalles de la receta
+        modalBody.innerHTML = `
+            <h2>${recipeDetails.title}</h2>
+            <img src="${recipeDetails.image}" alt="${recipeDetails.title}">
+            
+            <h3>Ingredientes:</h3>
+            <ul>
+                ${(recipeDetails.extendedIngredients || [])
+                    .map(ing => `<li>${ing.original}</li>`)
+                    .join('')}
+            </ul>
+            
+            <h3>Instrucciones:</h3>
+            ${recipeDetails.instructions ? 
+                // Si hay instrucciones como HTML, las muestra. Si no, muestra un mensaje.
+                (recipeDetails.instructions) : 
+                '<p>Instrucciones no disponibles.</p>'
+            }
+        `;
+
     } catch (error) {
         console.error('Error al obtener detalles de la receta:', error);
-        alert('Error: ' + error.message);
+        modalBody.innerHTML = `<p style="color: red;">Error al cargar la receta: ${error.message}</p>`;
+    }
+}
+
+/**
+ * @brief Cierra el modal de recetas.
+ */
+function closeModal() {
+    const modal = document.getElementById('recipe-modal');
+    if (modal) {
+        modal.classList.remove('show');
     }
 }
 
@@ -393,6 +425,19 @@ document.addEventListener('DOMContentLoaded', initHome);
 // ======================================================
 // IMPLEMENTACION DE INGRESO POR VOZ (SPEECH)
 // ======================================================
+
+// Conectar el botón de cierre del modal
+document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('modal-close-btn').addEventListener('click', closeModal);
+
+    // Opcional: Cerrar el modal si se hace clic fuera del contenido (en el overlay)
+    document.getElementById('recipe-modal').addEventListener('click', (event) => {
+        // Si el clic fue DIRECTAMENTE en el overlay (y no en sus hijos)
+        if (event.target === event.currentTarget) { 
+            closeModal();
+        }
+    });
+});
 //
 
 /**
