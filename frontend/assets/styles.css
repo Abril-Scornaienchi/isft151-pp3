@@ -27,7 +27,7 @@ body::before {
     top: -50px; left: -50px; right: -50px; bottom: -50px;
     background: radial-gradient(circle at top left, rgba(236, 110, 8, 0.854) 0%, rgba(158, 7, 153, 0.881) 70%),
                 radial-gradient(circle at bottom right, rgba(75, 0, 105, 0.893) 0%, rgba(122, 17, 227, 0.806) 70%);
-    background-size: 150% 150%;
+    background-size: 100% 100%;
     animation: backgroundMove 20s infinite alternate; /* Animación sutil */
     z-index: -1; /* Detrás del contenido */
 }
@@ -203,14 +203,13 @@ form button[type="submit"]:hover {
  * 5. Estilos Específicos para Páginas (Opcional, pero útil)
  * ================================================================= */
 .home-container { 
-    /* Quitamos display: flex; para que sea una columna por defecto */
-    
-    /* Mantenemos el ancho flexible, centrado */
-    width: 90%;            
-    max-width: 800px;     /* Volvemos al ancho original para la vista inicial */
+    /* Quitamos width: 90% para que el max-width sea el principal */
+    max-width: 960px;     /* Ancho máximo inicial (un poco más grande) */
+    width: 100%;           /* Ocupa el 100% HASTA el max-width */
     padding: 40px; 
     margin-left: auto;
     margin-right: auto;
+    box-sizing: border-box; /* Importante añadir esto */
     
     /* Añadimos transición para cuando cambie a flex */
     transition: max-width 0.5s ease-in-out; 
@@ -491,7 +490,6 @@ form button[type="submit"]:hover {
     border: 1px solid #eee;
     border-radius: 8px;
     box-shadow: 0 2px 5px rgba(0,0,0,0.08);
-    overflow: hidden; /* Para que la imagen no se salga */
     cursor: pointer;
     transition: all 0.2s ease-in-out;
 }
