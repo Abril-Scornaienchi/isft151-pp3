@@ -13,12 +13,13 @@
         
         <h1>Gestión de Despensa</h1>
         
+    <div id="main-content">
+    
         <div class="section-box form-wrapper"> 
-                    <form id="add-item-form">
-                        <h2>Agregar Ingrediente</h2>
-
+            <form id="add-item-form">
+                <h2>Agregar Ingrediente</h2>
                 <input type="text" id="article_name" placeholder="Nombre del articulo:" required>
-                <input type="number" id="quantity" placeholder="Cantidad" min =0 required>
+                <input type="number" id="quantity" placeholder="Cantidad" min="0" required>
                 <select id="unit" required>
                     <option value="" disabled selected>Seleccionar unidad:</option>
                     <option value="gramos">Gramos</option> 
@@ -33,43 +34,51 @@
                 </button>
                 <p id="speechResult" style="margin-top: 10px; color: green;"></p>
             </form>
-      
-        </div>
-        
-        <hr>
-        
-        <div class="section-box">
-            <h2>Mi Inventario</h2>
-            <table class="inventory-table">
-                <thead>
-                    <tr>
-                        <th>Nombre</th>
-                        <th>Cantidad</th>
-                        <th>Unidad</th>
-                        <th>Acciones</th>
-                    </tr>
-                </thead>
-                <tbody id="inventory-body">
-                </tbody>
-            </table>
-        </div>
-        
-        <hr>
-        
-        <div class="section-box">
-            <h2>Recetas Sugeridas</h2>
-            <button id="search-recipes-btn">Buscar Recetas con mi Inventario</button>
             
-            <ul id="recipes-list">
-            </ul>
+            <div class="section-box" style="margin-top: 30px;">
+                <h2>Mi Inventario</h2>
+                <table class="inventory-table">
+                    <thead>
+                        <tr>
+                            <th>Nombre</th>
+                            <th>Cantidad</th>
+                            <th>Unidad</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="inventory-body">
+                        </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <div class="section-box">
+             <h2>Recetas Sugeridas</h2>
+             <button id="search-recipes-btn">Buscar Recetas con mi Inventario</button>
         </div>
 
         <hr>
         <p><a href="#" id="logout-link">Cerrar Sesión</a></p>
-    
-        </div> 
 
-    <script src="./assets/js/inventory.js"></script> 
-    
+    </div> <!-- Cierre de #main-content -->
+
+    <!-- El panel de recetas es hermano de #main-content -->
+    <div id="recipe-panel">
+        <h2 id="recipe-panel-title">Recetas Encontradas</h2>
+        <div id="recipes-list-cards"></div>
+    </div>
+
+    </div> <!-- Cierre de .container.home-container -->
+
+        <script src="./assets/js/inventory.js"></script> 
+
+        <div id="recipe-modal" class="modal-overlay">
+        <div class="modal-content">
+            <button id="modal-close-btn" class="modal-close">&times;</button>
+            <div id="modal-body">
+                </div>
+        </div>
+    </div>
+
 </body>
 </html>

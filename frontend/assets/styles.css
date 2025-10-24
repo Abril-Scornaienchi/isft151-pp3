@@ -27,7 +27,7 @@ body::before {
     top: -50px; left: -50px; right: -50px; bottom: -50px;
     background: radial-gradient(circle at top left, rgba(236, 110, 8, 0.854) 0%, rgba(158, 7, 153, 0.881) 70%),
                 radial-gradient(circle at bottom right, rgba(75, 0, 105, 0.893) 0%, rgba(122, 17, 227, 0.806) 70%);
-    background-size: 150% 150%;
+    background-size: 100% 100%;
     animation: backgroundMove 20s infinite alternate; /* Animación sutil */
     z-index: -1; /* Detrás del contenido */
 }
@@ -189,15 +189,30 @@ form button[type="submit"]:hover {
     padding-bottom: 20px;
 }
 
+/* CUANDO la vista de recetas está activa... */
+.home-container.recipe-view-active .form-wrapper {
+    /* ...quitamos el centrado automático... */
+    margin-left: 0; 
+    margin-right: 0;
+    /* ...y podemos quitarle el ancho máximo si quieres que ocupe todo el espacio izquierdo */
+    /* max-width: none; */ /* Descomenta esta línea si quieres que se ensanche */
+}
+
 
 /* =================================================================
- * 5. Estilos Específicos para Páginas (Opcional, pero útil)
+ * 5. Estilos Específicos para Páginas
  * ================================================================= */
 .home-container { 
-    /* Ocupará el x% de la pantalla, pero nunca será más ancho que 800px */
-    width: 80%; 
-    max-width: 800px;
-    padding: 40px; /* Reduje un poco el padding para que se vea mejor */
+    /* Quitamos width: 90% para que el max-width sea el principal */
+    max-width: 960px;     /* Ancho máximo inicial */
+    width: 100%;           /* Ocupa el 100% HASTA el max-width */
+    padding: 40px; 
+    margin-left: auto;
+    margin-right: auto;
+    box-sizing: border-box;
+    
+    /* Añadimos transición para cuando cambie a flex */
+    transition: max-width 0.5s ease-in-out; 
 }
 
 .home-container h1 {
@@ -364,11 +379,12 @@ form button[type="submit"]:hover {
  * ================================================================= */
 
 /* Contenedor del título que mostrará el tooltip */
-[data-tooltip] {
+/* Ahora se aplica a la tarjeta de receta completa */
+.recipe-card[data-tooltip] {
     position: relative; /* Es la referencia para posicionar el tooltip */
 }
 
-[data-tooltip]::after {
+.recipe-card[data-tooltip]::after {
     content: attr(data-tooltip);
     
     /* Posicionamiento y Visibilidad */
@@ -396,8 +412,186 @@ form button[type="submit"]:hover {
 }
 
 /* El tooltip se muestra cuando el mouse está sobre el elemento */
-[data-tooltip]:hover::after {
+.recipe-card[data-tooltip]:hover::after {
     visibility: visible;
     opacity: 1; /* Transición suave de aparición */
     transform: translateX(-50%) translateY(0); /* Lo mueve ligeramente hacia abajo */
+}
+
+/* =================================================================
+ * 9. ESTILOS DEL LAYOUT (DOS COLUMNAS) Y TARJETAS DE RECETA
+ * ================================================================= */
+
+/* 2. Columna Izquierda (Inventario) - Estilos por defecto */
+#main-content {
+    width: 100%; /* Ocupa todo el ancho por defecto */
+    box-sizing: border-box;
+    transition: all 0.5s ease-in-out; 
+}
+
+/* 3. Columna Derecha (Recetas) - OCULTA COMPLETAMENTE POR DEFECTO */
+#recipe-panel {
+    display: none; /* Totalmente oculta y no ocupa espacio */
+    flex-basis: 0%; 
+    opacity: 0;
+    overflow: hidden; 
+    transition: all 0.5s ease-in-out;
+    border-left: 2px solid #f0f0f0;
+    padding-left: 0; /* Sin padding cuando está oculta */
+    box-sizing: border-box;
+    height: 90vh; 
+    overflow-y: auto;
+}
+
+
+/* El layout principal CAMBIA A FLEX y se ensancha */
+.home-container.recipe-view-active {
+    display: flex;         
+    flex-wrap: nowrap;     
+    max-width: 1200px;     /* Se ensancha para las dos columnas */
+}
+
+/* La columna izquierda SE ENCOGE */
+.home-container.recipe-view-active #main-content {
+    flex-basis: 60%; 
+    flex-shrink: 0;
+    padding-right: 30px; /* Añadimos separación */
+}
+
+/* El panel de recetas APARECE */
+.home-container.recipe-view-active #recipe-panel {
+    display: block; /* Se hace visible */
+    flex-basis: 40%; 
+    opacity: 1;
+    padding-left: 30px; /* Añadimos padding */
+}
+
+
+/* 5. Estilo del CONTENEDOR de las tarjetas */
+#recipes-list-cards {
+    display: grid;
+    /* responsive grid: crea tantas columnas como quepan, 
+     * donde cada una mide MÍNIMO 150px pero puede crecer (1fr)
+     */
+    /* 1. Aumentamos el mínimo para que sea más difícil crear 2 columnas */
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); 
+    gap: 15px; /* Espacio entre tarjetas */
+    
+    /* 2. Hacemos que la cuadrícula ocupe toda la altura del panel */
+    height: 100%; 
+    
+    /* 3. (Opcional) Alinea las tarjetas arriba si sobra espacio vertical */
+    align-content: start; 
+}
+
+/* 6. Estilo de CADA TARJETA individual */
+.recipe-card {
+    background-color: #fff;
+    border: 1px solid #eee;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.08);
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+}
+.recipe-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.12);
+}
+
+.recipe-card img {
+    width: 100%;
+    height: 150px; /* Altura fija para la imagen */
+    object-fit: cover; /* Recorta la imagen para que encaje */
+    display: block; /* Evita espacios extra debajo de la imagen */
+}
+
+.recipe-card h3 {
+    font-size: 1em;
+    font-weight: 600;
+    padding: 10px 15px;
+    margin: 0;
+    color: #333;
+    text-align: left; /* Alinea el título a la izquierda */
+}
+
+/* =================================================================
+ * 10. ESTILOS PARA EL MODAL DE DETALLES DE RECETA
+ * ================================================================= */
+
+/* 1. El fondo oscuro semitransparente (Overlay) */
+.modal-overlay {
+    display: none; /* Oculto por defecto */
+    position: fixed; /* Se queda fijo aunque hagas scroll */
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7); /* Fondo negro con 70% opacidad */
+    z-index: 1000; /* Asegura que esté por encima de todo */
+    justify-content: center; /* Centra el contenido horizontalmente */
+    align-items: center; /* Centra el contenido verticalmente */
+}
+
+/* 2. Clase para MOSTRAR el modal (se añade/quita con JS) */
+.modal-overlay.show {
+    display: flex; /* Cambia a flex para mostrar y centrar */
+}
+
+/* 3. La caja blanca del contenido del modal */
+.modal-content {
+    background-color: #fff;
+    padding: 30px;
+    border-radius: 10px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    position: relative; /* Para posicionar el botón de cierre */
+    width: 90%;
+    max-width: 700px; /* Ancho máximo del modal */
+    max-height: 85vh; /* Altura máxima, para que no ocupe toda la pantalla */
+    overflow-y: auto; /* Añade scroll si el contenido es muy largo */
+}
+
+/* 4. El botón de cierre (la "X") */
+.modal-close {
+    position: absolute;
+    top: 10px;
+    right: 15px;
+    background: none;
+    border: none;
+    font-size: 2.5em; /* Tamaño grande para la "X" */
+    color: #aaa;
+    cursor: pointer;
+    line-height: 1;
+}
+.modal-close:hover {
+    color: #333;
+}
+
+/* 5. Estilos para el contenido DENTRO del modal (opcional, puedes ajustar) */
+#modal-body h2 { /* Título de la receta */
+    margin-top: 0;
+    color: #333;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 10px;
+}
+
+#modal-body img { /* Imagen de la receta */
+    max-width: 100%;
+    height: auto;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+#modal-body h3 { /* Subtítulos (Ingredientes, Pasos) */
+    margin-top: 25px;
+    color: #555;
+    font-size: 1.2em;
+}
+
+#modal-body ul, #modal-body ol { /* Listas de ingredientes/pasos */
+    padding-left: 20px;
+    line-height: 1.6;
+    color: #444;
+}
+#modal-body li {
+    margin-bottom: 8px;
 }

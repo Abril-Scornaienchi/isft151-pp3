@@ -271,16 +271,18 @@ async function handleUpdateItem(alimentoId) {
  * Si la llamada es exitosa, delega el resultado a la función de renderizado.
  */
 async function handleSearchRecipes() {
-    // Verificación previa: ¿Hay ingredientes en el inventario?
+    
+    // Quitamos la clase por si estaba de una búsqueda anterior
+    document.querySelector('.home-container').classList.remove('recipe-view-active');
+
     const inventoryBody = document.getElementById('inventory-body');
     if (!inventoryBody || inventoryBody.children.length === 0 || (inventoryBody.children.length === 1 && inventoryBody.children[0].children.length === 1)) {
-        alert('Debes agregar al menos un ingrediente a tu inventario para poder buscar recetas.');
-        renderRecipes([]); // Limpia la lista por si había algo antes
-        return; // Detiene la ejecución de la función
+        alert('Debes agregar al menos un ingrediente...');
+        renderRecipes([]); // Limpia tarjetas
+        return; 
     }
 
     try {
-        // Llama a tu ruta GET para recetas
         const response = await fetch(`${BACKEND_URL}/recetas/inventario?userId=${currentUserId}`);
         const data = await response.json();
 
@@ -288,14 +290,25 @@ async function handleSearchRecipes() {
             throw new Error(data.error || 'Error al buscar recetas.');
         }
 
-        renderRecipes(data); // Muestra las recetas
+        // ▼▼▼ LÓGICA CLAVE ▼▼▼
+        if (data && data.length > 0) {
+            // SI hay recetas, AÑADIMOS la clase para mostrar las 2 columnas
+            document.querySelector('.home-container').classList.add('recipe-view-active');
+            renderRecipes(data); 
+        } else {
+            // SI NO hay recetas, nos aseguramos que la clase NO esté y limpiamos
+            renderRecipes([]); 
+            alert("No se encontraron recetas con tus ingredientes."); // Opcional: un aviso
+        }
+        
     } catch (error) {
         console.error('Fallo al buscar recetas:', error.message);
         alert('Fallo al buscar recetas: ' + error.message);
+        // Si hay error, también quitamos la clase y limpiamos
+        document.querySelector('.home-container').classList.remove('recipe-view-active');
+        renderRecipes([]);
     }
 }
-
-
 
 // =========================================================================
 // 4. FUNCIONES DE RENDERIZADO (DIBUJAR EL HTML)
@@ -336,72 +349,114 @@ function renderInventory(inventory) {
 }
 
 /**
- * @brief Muestra la lista de recetas sugeridas en la página web.
- * Convierte el array de recetas recibido de la API externa (vía Backend) en elementos <li>.
- * @param {Array<object>} recipes - Array de objetos de recetas encontradas (incluye título e ingredientes faltantes).
- * @returns {void}
+ * @brief Muestra las recetas encontradas en el panel derecho, 
+ * usando el nuevo formato de "Tarjetas" (imagen + título) y añade tooltip.
  */
 function renderRecipes(recipes) {
-    const list = document.getElementById('recipes-list');
-    if (!list) return;
+    
+    // 1. Apunta al NUEVO contenedor de tarjetas que creamos en el HTML
+    const cardContainer = document.getElementById('recipes-list-cards'); 
+    
+    if (!cardContainer) {
+        console.error("Error: No se encontró el elemento #recipes-list-cards");
+        return; 
+    }
 
-    list.innerHTML = ''; // Limpia la lista
+    // 2. Limpia las tarjetas anteriores
+    cardContainer.innerHTML = ''; 
 
-    if (recipes.length === 0) {
-        list.innerHTML = '<p>No se encontraron recetas o la lista está vacía.</p>';
+    // 3. Maneja el caso de que no haya recetas
+    if (!recipes || recipes.length === 0) { 
+        cardContainer.innerHTML = '<p>No se encontraron recetas.</p>';
         return;
     }
     
+    // 4. Itera sobre las recetas para crear cada tarjeta
     recipes.forEach(recipe => {
-        const li = document.createElement('li');
-        li.className = 'recipe-item'; 
+        const card = document.createElement('div');
+        card.className = 'recipe-card';
         
-        // Construir la lista de ingredientes faltantes
-        // Mapea el array de objetos de ingredientes faltantes para crear un texto legible.
-        const missingList = recipe.missedIngredients
-            .map(item => item.original) // Obtiene solo el nombre original del ingrediente
-            .join('\n- '); // Une los nombres con un salto de línea para el Tooltip
+        // --- ▼▼▼ RECUPERAMOS LA LÓGICA DEL TOOLTIP ▼▼▼ ---
+        
+        // 1. Calcula el texto del tooltip (igual que antes)
+        const missingList = (recipe.missedIngredients || []) // Añadimos || [] por seguridad
+            .map(item => item.original) 
+            .join('\n- '); 
+        const tooltipText = `Faltan (${recipe.missedIngredientCount || 0}):\n- ${missingList}`;
 
-        const tooltipText = `Faltan (${recipe.missedIngredientCount}):\n- ${missingList}`;
+        // 2. Añade el atributo data-tooltip a la TARJETA
+        card.setAttribute('data-tooltip', tooltipText);
+        
+        // --- ▲▲▲ FIN DE LA LÓGICA DEL TOOLTIP ▲▲▲ ---
 
-        // Tooltip (cajita) Personalizado
-        li.innerHTML = `
-            <div class="recipe-title" 
-                 onclick="handleViewRecipeDetails(${recipe.id})" 
-                 data-tooltip="${tooltipText}"> 
-                ${recipe.title}
-            </div>
-            <div class="recipe-missing">
-                Ingredientes faltantes: ${recipe.missedIngredientCount}
-            </div>
+        card.addEventListener('click', () => {
+            handleViewRecipeDetails(recipe.id);
+        });
+
+        card.innerHTML = `
+            <img src="${recipe.image}" alt="${recipe.title}">
+            <h3>${recipe.title}</h3>
         `;
-        list.appendChild(li);
+        
+        cardContainer.appendChild(card);
     });
 }
 
 /**
- * @brief Obtiene los detalles de una receta específica usando el BACKEND como PROXY seguro
- * y abre su URL en una nueva pestaña.
- * @param {number} recipeId - El ID de la receta de Spoonacular.
+ * @brief Obtiene los detalles de una receta (vía proxy backend) y los muestra en el modal.
  */
 async function handleViewRecipeDetails(recipeId) {
+    const modal = document.getElementById('recipe-modal');
+    const modalBody = document.getElementById('modal-body');
+    
+    if (!modal || !modalBody) return; // Seguridad
+
+    // Muestra un mensaje de carga mientras busca los datos
+    modalBody.innerHTML = '<p>Cargando detalles de la receta...</p>';
+    modal.classList.add('show'); // Muestra el overlay y el modal
 
     try {
-        // LLAMA A BACKEND: Usa tu nueva ruta /api/recetas/detalles/ (el proxy)
-        // El Backend ahora se encarga de añadir la clave API de forma secreta.
+        // Llama al backend (proxy)
         const response = await fetch(`${BACKEND_URL}/recetas/detalles/${recipeId}`); 
-        
         const recipeDetails = await response.json();
 
         if (!response.ok) {
-            throw new Error(recipeDetails.error || 'No se pudieron obtener los detalles de la receta.');
+            throw new Error(recipeDetails.error || 'No se pudieron obtener los detalles.');
         }
 
-        // Abre la URL de la receta en una nueva pestaña
-        window.open(recipeDetails.sourceUrl, '_blank');
+        // Construye el HTML con los detalles de la receta
+        modalBody.innerHTML = `
+            <h2>${recipeDetails.title}</h2>
+            <img src="${recipeDetails.image}" alt="${recipeDetails.title}">
+            
+            <h3>Ingredientes:</h3>
+            <ul>
+                ${(recipeDetails.extendedIngredients || [])
+                    .map(ing => `<li>${ing.original}</li>`)
+                    .join('')}
+            </ul>
+            
+            <h3>Instrucciones:</h3>
+            ${recipeDetails.instructions ? 
+                // Si hay instrucciones como HTML, las muestra. Si no, muestra un mensaje.
+                (recipeDetails.instructions) : 
+                '<p>Instrucciones no disponibles.</p>'
+            }
+        `;
+
     } catch (error) {
         console.error('Error al obtener detalles de la receta:', error);
-        alert('Error: ' + error.message);
+        modalBody.innerHTML = `<p style="color: red;">Error al cargar la receta: ${error.message}</p>`;
+    }
+}
+
+/**
+ * @brief Cierra el modal de recetas.
+ */
+function closeModal() {
+    const modal = document.getElementById('recipe-modal');
+    if (modal) {
+        modal.classList.remove('show');
     }
 }
 
@@ -414,6 +469,19 @@ document.addEventListener('DOMContentLoaded', initHome);
 // ======================================================
 // IMPLEMENTACION DE INGRESO POR VOZ (SPEECH)
 // ======================================================
+
+// Conectar el botón de cierre del modal
+document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('modal-close-btn').addEventListener('click', closeModal);
+
+    // Opcional: Cerrar el modal si se hace clic fuera del contenido (en el overlay)
+    document.getElementById('recipe-modal').addEventListener('click', (event) => {
+        // Si el clic fue DIRECTAMENTE en el overlay (y no en sus hijos)
+        if (event.target === event.currentTarget) { 
+            closeModal();
+        }
+    });
+});
 //
 /**
  * @brief Normaliza el nombre de la unidad transcrita para que coincida con los valores ENUM de Mongoose.
