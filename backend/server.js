@@ -33,6 +33,7 @@ const userService = require('./services/userService');
 // Importamos el nuevo servicio de traducción
 const translationService = require('./services/translationService');
 const mongoose = require('mongoose');
+const CacheEntry = require('./models/CacheEntryModel'); 
 
 const DB_URI = process.env.MONGO_URI;
 const PORT = process.env.PORT || 3000;
@@ -351,23 +352,45 @@ app.get('/api/recetas/inventario', checkAuth, async (req, res) => {
         const englishIngredients = translatedIngredientsString.split(separador).map(s => s.trim());
         const ingredientsList = englishIngredients.join(',');
 
+        // --- 2. BÚSQUEDA EN SPOONACULAR (con inglés y CACHÉ) ---
 
-        // --- 2. BÚSQUEDA EN SPOONACULAR (con inglés) ---
+        // a. Crear clave de caché para la búsqueda por ingredientes
+        const spoonacularSearchCacheKey = `spoonacular:search:${ingredientsList}`;
+        let data; // Variable para guardar los datos de Spoonacular (cacheados o nuevos)
 
-        const url = `https://api.spoonacular.com/recipes/findByIngredients?apiKey=${SPOONACULAR_API_KEY}&ingredients=${ingredientsList}&number=5&ranking=1&maxMissingIngredients=2`;
+        // b. Buscar en el caché de MongoDB
+        const cachedSearch = await CacheEntry.findOne({ cacheKey: spoonacularSearchCacheKey });
 
-        const respuesta = await fetch(url); 
-        const data = await respuesta.json(); // 'data' es un array de recetas [recipe1, recipe2, ...]
+        if (cachedSearch) {
+          // Cache Hit! Usamos los datos guardados
+          data = cachedSearch.data;
+          console.log(`[DB CACHE HIT] Búsqueda Spoonacular para: "${ingredientsList}"`);
+        } else {
+          // Cache Miss! Hacemos la llamada a Spoonacular
+          console.log(`[DB CACHE MISS] Llamando a Spoonacular Search para: "${ingredientsList}"`); 
 
-        if (!respuesta.ok) {
-            console.error("❌ ERROR DE SPOONACULAR:", { 
-                status: respuesta.status, // El código (ej: 401, 402, 429)
+          const url = `https://api.spoonacular.com/recipes/findByIngredients?apiKey=${SPOONACULAR_API_KEY}&ingredients=${ingredientsList}&number=5&ranking=1&maxMissingIngredients=2`;
+          const respuesta = await fetch(url); 
+          data = await respuesta.json(); // Obtenemos los datos up to date
+
+          if (!respuesta.ok) {
+            console.error("❌ ERROR DE SPOONACULAR (Search):", { 
+                status: respuesta.status, 
                 statusText: respuesta.statusText,
-                body: data // El mensaje de error (ej: "Quota exceeded")
+                body: data 
             });
+            throw new Error("Error al llamar a Spoonacular API (Search).");
+          }
 
-            throw new Error("Error al llamar a Spoonacular API.");
+          // GUARDAMOS la respuesta actualizada en MongoDB
+          await CacheEntry.create({
+            cacheKey: spoonacularSearchCacheKey,
+            data: data // Guardamos el array de recetas completo
+          });
+          // console.log(`[DB CACHE SAVED] Búsqueda Spoonacular para: "${ingredientsList}"`); // Log opcional
         }
+
+        // c. Validar si data está vacío 
         if (!data || data.length === 0) {
             return res.status(200).json([]); // No se encontraron recetas
         }
@@ -410,17 +433,43 @@ app.get('/api/recetas/detalles/:recipeId', async (req, res) => {
     const recipeId = req.params.recipeId;
     
     try {
-        // La clave API se lee del entorno del servidor (seguro)
-        const url = `https://api.spoonacular.com/recipes/${recipeId}/information?apiKey=${SPOONACULAR_API_KEY}`;
-        
-        const respuesta = await fetch(url);
-        const data = await respuesta.json();
-        
-        if (!respuesta.ok) {
-            // Reenviar el error si Spoonacular falla (ej: receta no existe)
-            return res.status(respuesta.status).json({ error: 'Error de la API externa al obtener detalles.', details: data.message });
-        }
+        // a. Crear clave de caché para los detalles de esta receta
+        const spoonacularDetailsCacheKey = `spoonacular:details:${recipeId}`;
+        let data; // Variable para los detalles
 
+        // b. Buscar en el caché de MongoDB
+        const cachedDetails = await CacheEntry.findOne({ cacheKey: spoonacularDetailsCacheKey });
+
+        if (cachedDetails) {
+          // ¡Cache Hit!
+          data = cachedDetails.data;
+          console.log(`[DB CACHE HIT] Detalles Spoonacular para ID: "${recipeId}"`);
+        } else {
+          // ¡Cache Miss!
+          console.log(`[DB CACHE MISS] Llamando a Spoonacular Details para ID: "${recipeId}"`);
+
+          const url = `https://api.spoonacular.com/recipes/${recipeId}/information?apiKey=${SPOONACULAR_API_KEY}`;
+          const respuesta = await fetch(url);
+          data = await respuesta.json(); // Datos actualizados
+
+          if (!respuesta.ok) {
+            console.error("❌ ERROR DE SPOONACULAR (Details):", { 
+                status: respuesta.status, 
+                statusText: respuesta.statusText,
+                body: data 
+            });
+            // Reenviar el error si Spoonacular falla
+            return res.status(respuesta.status).json({ error: 'Error de la API externa al obtener detalles.', details: data.message });
+          }
+
+          // GUARDAMOS la respuesta nueva en MongoDB
+          await CacheEntry.create({
+            cacheKey: spoonacularDetailsCacheKey,
+            data: data // Guardamos el objeto de detalles completo
+          });
+          console.log(`[DB CACHE SAVED] Detalles Spoonacular para ID: "${recipeId}"`);
+        }
+        
         
         // 1. (Igual que antes) Traducciones individuales para campos grandes
         const translatedTitlePromise = translationService.translateText(data.title, 'en', 'es');
