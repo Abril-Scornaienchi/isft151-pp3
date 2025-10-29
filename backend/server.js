@@ -30,6 +30,8 @@ require('dotenv').config();
 const express = require('express');
 // Importamos el módulo de servicio (nuestra lógica de negocio encapsulada)
 const userService = require('./services/userService'); 
+// Importamos el nuevo servicio de traducción
+const translationService = require('./services/translationService');
 const mongoose = require('mongoose');
 
 const DB_URI = process.env.MONGO_URI;
@@ -320,16 +322,80 @@ app.delete('/api/inventario/:alimentoId', checkAuth, async (req, res) => {
  */
 app.get('/api/recetas/inventario', checkAuth, async (req, res) => { 
     try {
+        // --- ▼▼▼ PEGA ESTE NUEVO BLOQUE DENTRO DEL try { ... } ▼▼▼ ---
+
+        const separador = "|||"; // Usaremos un separador único
+
+        // --- 1. TRADUCCIÓN DE INVENTARIO (ES -> EN) ---
+
+        // a. Obtener inventario en español
         const inventario = await userService.getAlimentosByUsuario(req.userId); 
-        const ingredientsList = inventario.map(item => item.article_name).join(',');
+        const spanishIngredients = inventario.map(item => item.article_name);
+
+        if (spanishIngredients.length === 0) {
+            return res.status(200).json([]); // Devuelve array vacío si no hay ingredientes
+        }
+
+        // b. Agruparlos en un solo string
+        const joinedSpanishIngredients = spanishIngredients.join(separador);
+        const ingredientsPrompt = `Translate the following list of kitchen ingredients to English. Keep the exact same separator ("${separador}") between each item: "${joinedSpanishIngredients}"`;
+
+        // c. Hacer UNA SOLA llamada a Gemini
+        const translatedIngredientsString = await translationService.translateText(ingredientsPrompt, 'es', 'en');
+
+        if (!translatedIngredientsString) {
+            throw new Error("La traducción de ingredientes (ES->EN) falló.");
+        }
+
+        // d. Convertir de vuelta a un array y unir para Spoonacular
+        const englishIngredients = translatedIngredientsString.split(separador).map(s => s.trim());
+        const ingredientsList = englishIngredients.join(',');
+
+
+        // --- 2. BÚSQUEDA EN SPOONACULAR (con inglés) ---
 
         const url = `https://api.spoonacular.com/recipes/findByIngredients?apiKey=${SPOONACULAR_API_KEY}&ingredients=${ingredientsList}&number=5&ranking=1&maxMissingIngredients=2`;
-        
+
         const respuesta = await fetch(url); 
-        const data = await respuesta.json();
-        res.status(200).json(data); 
+        const data = await respuesta.json(); // 'data' es un array de recetas [recipe1, recipe2, ...]
+
+        if (!respuesta.ok) {
+            console.error("❌ ERROR DE SPOONACULAR:", { 
+                status: respuesta.status, // El código (ej: 401, 402, 429)
+                statusText: respuesta.statusText,
+                body: data // El mensaje de error (ej: "Quota exceeded")
+            });
+
+            throw new Error("Error al llamar a Spoonacular API.");
+        }
+        if (!data || data.length === 0) {
+            return res.status(200).json([]); // No se encontraron recetas
+        }
+
+        // --- 3. TRADUCCIÓN DE RECETAS (EN -> ES) ---
+
+        // a. Agrupar todos los títulos de recetas en un solo string
+        const englishTitles = data.map(recipe => recipe.title);
+        const joinedEnglishTitles = englishTitles.join(separador);
+        const titlesPrompt = `Translate the following list of recipe titles to Spanish. Keep the exact same separator ("${separador}") between each item: "${joinedEnglishTitles}"`;
+
+        // b. Hacer UNA SOLA llamada a Gemini
+        const translatedTitlesString = await translationService.translateText(titlesPrompt, 'en', 'es');
+
+        let translatedTitles = translatedTitlesString ? translatedTitlesString.split(separador).map(s => s.trim()) : [];
+
+        // c. Crear el array final, reemplazando los títulos
+        const translatedData = data.map((recipe, index) => ({
+            ...recipe, // Copiamos datos originales (id, image, missedIngredients, etc.)
+            // Usamos el título traducido, o el original si la traducción falló
+            title: translatedTitles[index] || recipe.title, 
+        }));
+
+        // 4. Enviar los datos TRADUCIDOS al frontend
+        res.status(200).json(translatedData); 
 
     } catch (error) {
+        console.error("❌ ERROR DETALLADO EN GET /api/recetas/inventario:", error); 
         res.status(500).json({ error: 'Error interno al buscar recetas.', details: error.message });
     }
 });
@@ -355,7 +421,67 @@ app.get('/api/recetas/detalles/:recipeId', async (req, res) => {
             return res.status(respuesta.status).json({ error: 'Error de la API externa al obtener detalles.', details: data.message });
         }
 
-        res.status(200).json(data); 
+        
+        // 1. (Igual que antes) Traducciones individuales para campos grandes
+        const translatedTitlePromise = translationService.translateText(data.title, 'en', 'es');
+        const translatedSummaryPromise = translationService.translateText(data.summary, 'en', 'es');
+        const translatedInstructionsPromise = translationService.translateText(data.instructions, 'en', 'es');
+
+        // 2. [NUEVA LÓGICA] Agrupación de ingredientes
+
+        // Extraemos todos los strings de ingredientes
+        const originalIngredientStrings = data.extendedIngredients.map(ing => ing.original);
+
+        // Definimos un separador ÚNICO que no exista en el texto
+        const separator = "|||"; 
+
+        // Unimos todos los ingredientes en UN SOLO string
+        const joinedIngredientString = originalIngredientStrings.join(separator);
+
+        // 3. [NUEVA PROMESA] Creamos UN solo prompt para TODOS los ingredientes
+        const ingredientsPrompt = `Translate the following list of ingredients to Spanish. Keep the exact same separator ("${separator}") between each item: "${joinedIngredientString}"`;
+
+        const translatedIngredientsPromise = translationService.translateText(ingredientsPrompt, 'en', 'es');
+
+        // 4. [NUEVO Promise.all] Esperamos a que las 4 llamadas terminen
+        //    (Esto reduce de ~18 llamadas a solo 4)
+        const [
+            translatedTitle,
+            translatedSummary,
+            translatedInstructions,
+            translatedJoinedString // Esto es un solo string con los ingredientes traducidos
+        ] = await Promise.all([
+            translatedTitlePromise,
+            translatedSummaryPromise,
+            translatedInstructionsPromise,
+            translatedIngredientsPromise 
+        ]);
+
+        // 5. [NUEVA LÓGICA] Separamos el string traducido de vuelta a un array
+        let translatedIngredients = [];
+        if (translatedJoinedString) {
+            // Usamos el mismo separador para volver a crear el array
+            translatedIngredients = translatedJoinedString.split(separator);
+        }
+
+        // 6. Construimos el objeto de receta traducido final
+        const translatedData = {
+            ...data, // Copiamos datos originales (id, image, etc.)
+            title: translatedTitle || data.title, // Usamos traducido o el original
+            summary: translatedSummary || data.summary,
+            instructions: translatedInstructions || data.instructions,
+            // Re-mapeamos los ingredientes para asignar la traducción correcta
+            extendedIngredients: data.extendedIngredients.map((ing, index) => {
+                return {
+                    ...ing, // Copiamos datos del ingrediente original (amount, unit, etc.)
+                    // Asignamos la traducción del array o el original si algo falló
+                    original: (translatedIngredients[index] ? translatedIngredients[index].trim() : ing.original),
+                };
+            })
+        };
+
+        // 7. Enviamos los datos TRADUCIDOS al frontend
+        res.status(200).json(translatedData);
 
     } catch (error) {
         // Manejo de errores de red o internos del servidor
