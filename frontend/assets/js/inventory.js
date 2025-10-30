@@ -23,13 +23,8 @@ function initHome() {
 
     if (storedId) {
         currentUserId = storedId;
+        connectEventListeners(); 
         loadInventory();
-        // Conecta el formulario de agregar al manejador
-        document.getElementById('add-item-form').addEventListener('submit', handleAddItem);
-        // Conecta el botón de buscar recetas
-        document.getElementById('search-recipes-btn').addEventListener('click', handleSearchRecipes);
-        // Conecta el enlace de cerrar sesión
-        document.getElementById('logout-link').addEventListener('click', handleLogout);
     } else {
         window.location.href = 'index.html'; 
     }
@@ -51,8 +46,8 @@ async function loadInventory() {
         if (!response.ok) {
             throw new Error(data.error || 'Error al cargar el inventario.');
         }
-
         renderInventory(data); // Muestra los datos en la tabla
+        document.querySelector('.home-container').classList.remove('recipe-view-active');
         renderRecipes([]); // Limpia las recetas
     } catch (error) {
         console.error('Error al cargar el inventario:', error.message);
@@ -267,49 +262,141 @@ async function handleUpdateItem(alimentoId) {
 /**
  * @brief Maneja el evento de búsqueda de recetas.
  * Esta función es responsable de llamar al endpoint del Backend
- * que consulta la API externa (Spoonacular) usando el inventario actual del usuario.
- * Si la llamada es exitosa, delega el resultado a la función de renderizado.
+ * que consulta la API externa (Spoonacular) usando el inventario actual del usuario,
+ * aplicando filtros nutricionales y de dieta.
  */
 async function handleSearchRecipes() {
-    
-    // Quitamos la clase por si estaba de una búsqueda anterior
-    document.querySelector('.home-container').classList.remove('recipe-view-active');
+    // 1. OBTENER VALORES DE FILTRO DEL FORMULARIO
+    const diet = document.getElementById('diet_preference').value;
+    const maxCalories = document.getElementById('maxCalories').value;
+    const maxCarbs = document.getElementById('maxCarbs').value;
+    const maxProtein = document.getElementById('maxProtein').value;
+    const maxSugar = document.getElementById('maxSugar').value; 
 
-    const inventoryBody = document.getElementById('inventory-body');
-    if (!inventoryBody || inventoryBody.children.length === 0 || (inventoryBody.children.length === 1 && inventoryBody.children[0].children.length === 1)) {
-        alert('Debes agregar al menos un ingrediente...');
-        renderRecipes([]); // Limpia tarjetas
-        return; 
+    // 2. FETCH: OBTENER EL INVENTARIO COMPLETO (SIN FILTRAR)
+    const inventoryResponse = await fetch(`${BACKEND_URL}/inventario?userId=${currentUserId}`);
+    const rawInventory = await inventoryResponse.json();
+    
+    // Si la carga del inventario falló o está vacío
+    if (!inventoryResponse.ok || !rawInventory || rawInventory.length === 0) {
+        alert('Error al cargar inventario o está vacío. Asegúrate de tener artículos guardados.');
+        renderRecipes([]);
+        return;
     }
 
+    // 4. CONSTRUIR LA LISTA FINAL (Anti-Sobrecarga y Anti-Duplicados)
+    // Se usa Set para asegurar que 'papa' y 'Papa' no se cuenten doble si Mongoose los devolvió mal
+    const uniqueIngredients = new Set(rawInventory.map(item => item.article_name));
+    const sortedList = Array.from(uniqueIngredients).sort(); 
+    // Usamos .slice(0, 5) para tomar solo los primeros 5 elementos de la lista ordenada
+    const limitedList = sortedList.slice(0, 6);
+    // Ahora, construimos la URL solo con los 5 mejores ingredientes:
+    const rawList = limitedList.join(',');
+    const ingredientsList = encodeURIComponent(rawList);
+
+
+    // 5. CONSTRUIR PARÁMETROS NUTRICIONALES
+    let filterParams = '';
+    
+    // Incluimos la dieta y filtros numéricos solo si tienen valor
+    if (diet) filterParams += `&diet=${diet}`;
+    if (maxCalories) filterParams += `&maxCalories=${maxCalories}`;
+    if (maxCarbs) filterParams += `&maxCarbs=${maxCarbs}`;
+    if (maxProtein) filterParams += `&maxProtein=${maxProtein}`;
+    if (maxSugar) filterParams += `&maxSugar=${maxSugar}`; 
+    
     try {
-        const response = await fetch(`${BACKEND_URL}/recetas/inventario?userId=${currentUserId}`);
+        // 6. FETCH FINAL: ENVIAR LA LISTA LIMPIA DE INGREDIENTES AL BACKEND
+        const response = await fetch(`${BACKEND_URL}/recetas/inventario?userId=${currentUserId}&list=${ingredientsList}${filterParams}`);
+        
         const data = await response.json();
 
         if (!response.ok) {
-            throw new Error(data.error || 'Error al buscar recetas.');
+            // Manejo de error de API (401/402)
+            throw new Error(data.error || 'Error al buscar recetas. (Verificar API Key)');
         }
 
-        // ▼▼▼ LÓGICA CLAVE ▼▼▼
-        if (data && data.length > 0) {
-            // SI hay recetas, AÑADIMOS la clase para mostrar las 2 columnas
-            document.querySelector('.home-container').classList.add('recipe-view-active');
-            renderRecipes(data); 
-        } else {
-            // SI NO hay recetas, nos aseguramos que la clase NO esté y limpiamos
-            renderRecipes([]); 
-            alert("No se encontraron recetas con tus ingredientes."); // Opcional: un aviso
+        const recipesList = data.results || [];
+        // 1. OBTENER el contenedor principal
+        const homeContainer = document.querySelector('.home-container');
+        // 2. AÑADIR la clase para activar el diseño de dos columnas
+        if (homeContainer) {
+            homeContainer.classList.add('recipe-view-active');
         }
-        
+    
+        renderRecipes(recipesList);
+
     } catch (error) {
         console.error('Fallo al buscar recetas:', error.message);
         alert('Fallo al buscar recetas: ' + error.message);
-        // Si hay error, también quitamos la clase y limpiamos
-        document.querySelector('.home-container').classList.remove('recipe-view-active');
-        renderRecipes([]);
+        return;
     }
 }
 
+// ======================================================
+// === GESTIÓN DE EVENTOS (CONEXIÓN DE BOTONES) ===
+// ======================================================
+
+/**
+ * @brief Conecta todos los Event Listeners de la página a sus respectivas funciones.
+ * Esta función asegura que el código JavaScript pueda encontrar y reaccionar a los botones en el HTML.
+ */
+function connectEventListeners() {
+    // 1. Conexión de Agregar (Formulario)
+    const addItemForm = document.getElementById('add-item-form');
+    if (addItemForm) addItemForm.addEventListener('submit', handleAddItem);
+    
+    // Conectar el botón de búsqueda visible al motor de búsqueda
+    const applyFiltersBtnVisible = document.getElementById('apply-filters-btn-visible');
+    if (applyFiltersBtnVisible) {
+        applyFiltersBtnVisible.addEventListener('click', handleSearchRecipes);
+    }
+
+    // 3. Conexión de Voz
+    const recordAudioBtn = document.getElementById('recordAudioBtn');
+    if (recordAudioBtn) setupAudioInput(); // Llama a la función que inicializa el micrófono
+    
+    // 4. Conexión de Logout
+    const logoutLink = document.getElementById('logout-link');
+    if (logoutLink) logoutLink.addEventListener('click', handleLogout);
+
+    // Lógica de filtros y búsqueda
+    const menuBtn = document.getElementById('menu-toggle-btn');
+    const sidebar = document.getElementById('filter-sidebar');
+    const applyFiltersBtn = document.getElementById('apply-filters-btn'); // <-- ¡Única declaración permitida!
+
+
+    if (menuBtn && sidebar && applyFiltersBtn) {
+        
+        // MANEJO DE ABRIR/CERRAR (El botón Hamburguesa)
+        menuBtn.addEventListener('click', () => {
+            // Alternar la clase 'active' para mostrar/ocultar el sidebar
+            sidebar.classList.toggle('active');
+
+            // Cambiar el texto y color del botón
+            if (sidebar.classList.contains('active')) {
+                menuBtn.textContent = '✕ Cerrar Filtros';
+                menuBtn.style.backgroundColor = '#dc3545';
+            } else {
+                menuBtn.textContent = '☰ Filtros';
+                menuBtn.style.backgroundColor = '#007bff';
+            }
+        });
+        
+        // MANEJO DE BÚSQUEDA Y CIERRE (El botón Buscar Recetas)
+        applyFiltersBtn.addEventListener('click', () => {
+            // 1. Ejecuta la búsqueda de recetas
+            handleSearchRecipes();
+            
+            // 2. Cierra el sidebar automáticamente después de buscar
+            if (sidebar.classList.contains('active')) {
+                 sidebar.classList.remove('active');
+                 menuBtn.textContent = '☰ Filtros';
+                 menuBtn.style.backgroundColor = '#007bff';
+            }
+        });
+    }
+}
 // =========================================================================
 // 4. FUNCIONES DE RENDERIZADO (DIBUJAR EL HTML)
 // =========================================================================
@@ -353,8 +440,6 @@ function renderInventory(inventory) {
  * usando el nuevo formato de "Tarjetas" (imagen + título) y añade tooltip.
  */
 function renderRecipes(recipes) {
-    
-    // 1. Apunta al NUEVO contenedor de tarjetas que creamos en el HTML
     const cardContainer = document.getElementById('recipes-list-cards'); 
     
     if (!cardContainer) {
@@ -362,33 +447,24 @@ function renderRecipes(recipes) {
         return; 
     }
 
-    // 2. Limpia las tarjetas anteriores
-    cardContainer.innerHTML = ''; 
+    cardContainer.innerHTML = ''; // 1. Limpia el contenido anterior.
 
-    // 3. Maneja el caso de que no haya recetas
     if (!recipes || recipes.length === 0) { 
         cardContainer.innerHTML = '<p>No se encontraron recetas.</p>';
         return;
     }
     
-    // 4. Itera sobre las recetas para crear cada tarjeta
     recipes.forEach(recipe => {
         const card = document.createElement('div');
         card.className = 'recipe-card';
         
-        // --- ▼▼▼ RECUPERAMOS LA LÓGICA DEL TOOLTIP ▼▼▼ ---
-        
-        // 1. Calcula el texto del tooltip (igual que antes)
-        const missingList = (recipe.missedIngredients || []) // Añadimos || [] por seguridad
+        const missingList = (recipe.missedIngredients || [])
             .map(item => item.original) 
             .join('\n- '); 
         const tooltipText = `Faltan (${recipe.missedIngredientCount || 0}):\n- ${missingList}`;
 
-        // 2. Añade el atributo data-tooltip a la TARJETA
         card.setAttribute('data-tooltip', tooltipText);
         
-        // --- ▲▲▲ FIN DE LA LÓGICA DEL TOOLTIP ▲▲▲ ---
-
         card.addEventListener('click', () => {
             handleViewRecipeDetails(recipe.id);
         });
@@ -396,6 +472,7 @@ function renderRecipes(recipes) {
         card.innerHTML = `
             <img src="${recipe.image}" alt="${recipe.title}">
             <h3>${recipe.title}</h3>
+            <p>Faltan: ${recipe.missedIngredientCount || 0}</p>
         `;
         
         cardContainer.appendChild(card);
@@ -594,6 +671,3 @@ function setupAudioInput() {
         recordBtn.innerText = "🎙️ Ingreso por Voz";
     });
 }
-
-// 6. Ejecuta la configuración de voz DESPUÉS de initHome
-document.addEventListener('DOMContentLoaded', setupAudioInput);

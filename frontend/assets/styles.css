@@ -67,6 +67,9 @@ h1 {
     color: #4a4a4a;
     margin-bottom: 15px;
     font-weight: 600; /* Un poco más de peso */
+    text-align: center;
+    width: 100%;
+    padding-right: 150px;
 }
 
 h1 + p { /* Subtítulo debajo del H1 (si existe) */
@@ -594,4 +597,104 @@ form button[type="submit"]:hover {
 }
 #modal-body li {
     margin-bottom: 8px;
+}
+/* =================================================================
+ * 5. Estilos para el Sidebar de Filtros
+ * ================================================================= */
+
+/* Estilo del botón "hamburguesa" */
+.menu-toggle-btn {
+background-color: #007bff; 
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 1em;
+    margin-bottom: 20px;
+    transition: all 0.2s;
+    float: right; 
+    margin-right: 20px; /* Separación del título */
+    margin-top: -50px; 
+    position: fixed;
+    width: 140px; 
+    text-align: center;
+    top: 200px;    /* ⬅️ NUEVO: Fijo 20px desde la parte superior */
+    right: 20px; /* Margen desde la izquierda */
+    z-index: 1002;
+}
+
+.menu-toggle-btn:hover {
+    background-color: #0056b3;
+}
+
+
+/* BARRA LATERAL DE FILTROS */
+#filter-sidebar {
+    /* Posición Fija para que flote sobre el contenido */
+    position: fixed;
+    left: 0;          /* ⬅️ Ancla el sidebar a la derecha de la ventana */
+    top: 0;
+    width: 300px; /* Ancho del sidebar */
+    height: 100%;
+    background-color: #f7f7f7;
+    box-shadow: -4px 0 10px rgba(0, 0, 0, 0.1);
+    z-index: 1000; /* Asegura que esté encima de todo */
+    overflow-y: auto;
+    transform: translateX(-1000px); 
+    transition: transform 0.3s ease-in-out; 
+    padding-top: 80px; /* Añade un buen espacio arriba para el título de la app */
+    padding-bottom: 20px;
+    padding-left: 20px;
+    padding-right: 20px;
+    box-sizing: border-box; /* Incluye el padding dentro del ancho de 300px */  
+}
+
+/* Clase para mostrar el sidebar */
+#filter-sidebar.active {
+    transform: translateX(0); /* Lo movemos de vuelta a su posición (visible) */
+}
+
+/* Estilos internos para el contenido del sidebar */
+.sidebar-content {
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px; /* Espaciado entre elementos */
+}
+
+/* Estilos de los inputs y selects dentro del sidebar */
+#filter-sidebar input[type="number"],
+#filter-sidebar select,
+#filter-sidebar button {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-sizing: border-box;
+}
+
+#filter-sidebar button {
+    background-color: #28a745; /* Botón de búsqueda verde */
+    color: white;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+#filter-sidebar button:hover {
+    background-color: #1e7e34;
+}
+
+#filter-sidebar label {
+    font-weight: bold;
+    margin-top: 5px;
+}
+
+#filter-sidebar h2 {
+    position: absolute;
+    top: 20px; /* Posiciona el título del sidebar en la parte superior */
+    left: 20px;
+    margin: 0;
+    font-size: 1.5em;
+    font-weight: 600;
 }

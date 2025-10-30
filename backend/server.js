@@ -320,20 +320,52 @@ app.delete('/api/inventario/:alimentoId', checkAuth, async (req, res) => {
  */
 app.get('/api/recetas/inventario', checkAuth, async (req, res) => { 
     try {
-        const inventario = await userService.getAlimentosByUsuario(req.userId); 
-        const ingredientsList = inventario.map(item => item.article_name).join(',');
-
-        const url = `https://api.spoonacular.com/recipes/findByIngredients?apiKey=${SPOONACULAR_API_KEY}&ingredients=${ingredientsList}&number=5&ranking=1&maxMissingIngredients=2`;
+        // 1. Obtener los ingredientes (la lista limpia que viene del Frontend)
+        const ingredientsList = req.query.list;
         
-        const respuesta = await fetch(url); 
+        if (!ingredientsList || ingredientsList.length === 0) {
+             return res.status(200).json([]); 
+        }
+        
+        // 2. OBTENER FILTROS NUTRICIONALES Y DE DIETA
+        const { diet, maxCalories, maxCarbs, maxProtein, maxSugar } = req.query; 
+
+        // 3. CONSTRUIR CADENA DE FILTROS ADICIONALES
+        let filters = '';
+        if (diet) filters += `&diet=${diet}`;
+        if (maxCalories) filters += `&maxCalories=${maxCalories}`;
+        if (maxCarbs) filters += `&maxCarbs=${maxCarbs}`;
+        if (maxProtein) filters += `&maxProtein=${maxProtein}`;
+        if (maxSugar) filters += `&maxSugar=${maxSugar}`; 
+        
+        // 4. CONSTRUIR URL FINAL
+        const url = `https://api.spoonacular.com/recipes/complexSearch?apiKey=${SPOONACULAR_API_KEY}&query=recipe&includeIngredients=${ingredientsList}&number=100&fillIngredients=true&ignorePantry=true${filters}`;        console.log("URL de Spoonacular enviada:", url); // <--- AÑADE ESTA LÍNEA
+        const respuesta = await fetch(url, { 
+            headers: { 'Cache-Control': 'no-cache', 'Accept': 'application/json' } 
+        });
+
+        if (!respuesta.ok) {
+            // Si hay un error (ej: 401, 402), lee el error como TEXTO para evitar el crash.
+            const errorText = await respuesta.text(); 
+            console.error("ERROR API SPOONACULAR:", respuesta.status, errorText);
+            
+            // Devuelve un error 500 al frontend para indicar el fallo externo.
+            return res.status(500).json({ 
+                error: `Error de API Externa [${respuesta.status}]. Verifique la clave o cuota.`,
+                details: errorText
+            });
+        }
+        
+        // Si la respuesta fue 200 OK, ahora SÍ leemos el JSON.
         const data = await respuesta.json();
-        res.status(200).json(data); 
+
+        return res.status(200).json(data); 
 
     } catch (error) {
-        res.status(500).json({ error: 'Error interno al buscar recetas.', details: error.message });
+        console.error("ERROR CRÍTICO AL BUSCAR RECETAS:", error.message);
+        return res.status(500).json({ error: 'Error interno al buscar recetas.', details: error.message });
     }
 });
-
 
 // BUSCAR DETALLES DE RECETA (PROXY SEGURO)
 /**

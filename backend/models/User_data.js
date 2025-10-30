@@ -24,7 +24,32 @@ const UserDataSchema = new mongoose.Schema({
         type: String,
         enum: ['Admin', 'User'],
         default: 'User',
-    }
+    },
+    diet_preference: {
+    type: String,
+    enum: ['vegetarian', 'vegan', 'gluten free','none'], // Opciones
+    default: 'none'
+    },
+    maxCalories: {
+        type: Number,
+        min: 0,
+        default: 2500 // Valor por defecto
+    },
+    maxCarbs: {
+        type: Number,
+        min: 0,
+        default: 300
+    },
+    maxProtein: {
+        type: Number,
+        min: 0,
+        default: 150
+    },
+    maxSugar: {
+    type: Number,
+    min: 0,
+    default: 50 // Un valor por defecto
+    },
 }, {
     timestamps: true 
 });

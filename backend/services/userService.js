@@ -158,7 +158,7 @@ async function createOrUpdateAlimento(userId, article_name, quantity, unit) {
  * Metodo READ del CRUD de Inventario.
  */
 async function getAlimentosByUsuario(userId) {
-    return await Inventory.find({ user: userId });
+    return await Inventory.find({ user: userId }).lean();
 }
 
 /**
