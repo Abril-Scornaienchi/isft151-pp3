@@ -346,10 +346,10 @@ function connectEventListeners() {
     const addItemForm = document.getElementById('add-item-form');
     if (addItemForm) addItemForm.addEventListener('submit', handleAddItem);
     
-    // Conectar el botón de búsqueda visible al motor de búsqueda
-    const applyFiltersBtnVisible = document.getElementById('apply-filters-btn-visible');
-    if (applyFiltersBtnVisible) {
-        applyFiltersBtnVisible.addEventListener('click', handleSearchRecipes);
+    // Conectar el botón de búsqueda principal
+    const searchBtn = document.getElementById('search-recipes-btn');
+    if (searchBtn) {
+        searchBtn.addEventListener('click', handleSearchRecipes);
     }
 
     // 3. Conexión de Voz

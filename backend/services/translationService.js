@@ -1,20 +1,15 @@
-// 1. Carga las variables de entorno (para la clave API de Gemini)
+// 1. Carga las variables de entorno
 require('dotenv').config({ path: '../.env' });
 
 // 2. Importa la librería de Google AI
 const { GoogleGenerativeAI } = require("@google/generative-ai");
+// 3. IMPORTA EL MODELO DE CACHÉ DE MONGO
+const CacheEntry = require('../models/CacheEntryModel');
 
-const CacheEntry = require('../models/CacheEntryModel'); 
-
-// 3. Lee la clave API de Gemini desde el archivo .env
+// 4. Lee la clave API de Gemini
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
-// 4. Valida que la clave exista
-if (!GEMINI_API_KEY) {
-  console.error("❌ Error: Falta la variable de entorno GEMINI_API_KEY en el archivo .env");
-}
-
-// 5. Inicializa el cliente de Google AI (solo si la clave existe)
+// 5. Valida e inicializa
 let genAI;
 let model;
 if (GEMINI_API_KEY) {
@@ -25,11 +20,7 @@ if (GEMINI_API_KEY) {
 }
 
 /**
- * @brief Traduce un texto de un idioma de origen a un idioma de destino usando Gemini.
- * @param {string} textToTranslate El texto que se desea traducir.
- * @param {string} sourceLang El código del idioma de origen
- * @param {string} targetLang El código del idioma de destino *
- * @returns {Promise<string|null>} El texto traducido, o null si ocurre un error o la API no está inicializada.
+ * @brief Traduce texto usando el caché de MongoDB con expiración de 23 horas.
  */
 async function translateText(textToTranslate, sourceLang, targetLang) {
   if (!model) {
@@ -45,23 +36,19 @@ async function translateText(textToTranslate, sourceLang, targetLang) {
     const cachedEntry = await CacheEntry.findOne({ cacheKey: cacheKey });
 
     if (cachedEntry) {
-      // Si encontramos algo, MongoDB ya maneja la expiración con TTL.
-      // Solo devolvemos el dato guardado.
-      console.log(`[DB CACHE HIT] Traducción para: "${textToTranslate}"`); // Log opcional
+      // ¡Cache Hit! MongoDB maneja la expiración (23h)
       return cachedEntry.data; 
     }
 
     // --- Si no está en caché (o ya fue borrado por TTL) ---
     
-    console.log(`[DB CACHE MISS] Llamando a Gemini para: "${textToTranslate}"`);
     const prompt = `Translate ONLY the following text from ${sourceLang} to ${targetLang}. Do not add any extra characters or explanations. The text to translate is: "${textToTranslate}"`;
     
     const result = await model.generateContent(prompt);
     const response = result.response;
     const translatedText = response.text().trim();
     
-    // 3. GUARDAMOS la traducción en MongoDB ANTES de devolverla
-    //    (No necesitamos guardar timestamp, createdAt lo hace Mongoose y expires lo usa TTL)
+    // 3. GUARDAMOS la traducción en MongoDB
     await CacheEntry.create({
       cacheKey: cacheKey,
       data: translatedText
@@ -77,7 +64,7 @@ async function translateText(textToTranslate, sourceLang, targetLang) {
   }
 }
 
-// Exporta la función para que otros archivos (como server.js) puedan usarla
+// Exporta la función
 module.exports = {
   translateText,
 };

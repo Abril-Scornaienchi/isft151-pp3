@@ -323,44 +323,6 @@ app.delete('/api/inventario/:alimentoId', checkAuth, async (req, res) => {
  */
 app.get('/api/recetas/inventario', checkAuth, async (req, res) => { 
     try {
-        // Ruta rápida: si el Frontend envía la lista y filtros, usamos complexSearch directo
-        const ingredientsList = req.query.list;
-        if (ingredientsList && ingredientsList.length > 0) {
-            // 2. OBTENER FILTROS NUTRICIONALES Y DE DIETA
-            const { diet, maxCalories, maxCarbs, maxProtein, maxSugar } = req.query; 
-
-            // 3. CONSTRUIR CADENA DE FILTROS ADICIONALES
-            let filters = '';
-            if (diet) filters += `&diet=${diet}`;
-            if (maxCalories) filters += `&maxCalories=${maxCalories}`;
-            if (maxCarbs) filters += `&maxCarbs=${maxCarbs}`;
-            if (maxProtein) filters += `&maxProtein=${maxProtein}`;
-            if (maxSugar) filters += `&maxSugar=${maxSugar}`; 
-
-            // 4. CONSTRUIR URL FINAL
-            const url = `https://api.spoonacular.com/recipes/complexSearch?apiKey=${SPOONACULAR_API_KEY}&query=recipe&includeIngredients=${ingredientsList}&number=100&fillIngredients=true&ignorePantry=true${filters}`;
-            console.log("URL de Spoonacular enviada:", url);
-            const respuesta = await fetch(url, { 
-                headers: { 'Cache-Control': 'no-cache', 'Accept': 'application/json' } 
-            });
-
-            if (!respuesta.ok) {
-                // Si hay un error (ej: 401, 402), lee el error como TEXTO para evitar el crash.
-                const errorText = await respuesta.text(); 
-                console.error("ERROR API SPOONACULAR:", respuesta.status, errorText);
-                
-                // Devuelve un error 500 al frontend para indicar el fallo externo.
-                return res.status(500).json({ 
-                    error: `Error de API Externa [${respuesta.status}]. Verifique la clave o cuota.`,
-                    details: errorText
-                });
-            }
-            
-            // Si la respuesta fue 200 OK, ahora SÍ leemos el JSON.
-            const data = await respuesta.json();
-            return res.status(200).json(data); 
-        }
-
         const separador = "|||"; // Usaremos un separador único
 
         // --- 1. TRADUCCIÓN DE INVENTARIO (ES -> EN) ---
@@ -388,46 +350,54 @@ app.get('/api/recetas/inventario', checkAuth, async (req, res) => {
         const englishIngredients = translatedIngredientsString.split(separador).map(s => s.trim());
         const ingredientsCommaSeparated = englishIngredients.join(',');
 
-        // --- 2. BÚSQUEDA EN SPOONACULAR (con inglés y CACHÉ) ---
+        // --- 2. OBTENER FILTROS ( Fusión de la lógica) ---
+        const { diet, maxCalories, maxCarbs, maxProtein, maxSugar } = req.query; 
 
-        // a. Crear clave de caché para la búsqueda por ingredientes
-        const spoonacularSearchCacheKey = `spoonacular:search:${ingredientsCommaSeparated}`;
-        let data; // Variable para guardar los datos de Spoonacular (cacheados o nuevos)
+        // Construir la cadena de filtros
+        let filtersQueryString = '';
+        if (diet && diet !== 'none' && diet !== '') filtersQueryString += `&diet=${diet}`;
+        if (maxCalories) filtersQueryString += `&maxCalories=${maxCalories}`;
+        if (maxCarbs) filtersQueryString += `&maxCarbs=${maxCarbs}`;
+        if (maxProtein) filtersQueryString += `&maxProtein=${maxProtein}`;
+        if (maxSugar) filtersQueryString += `&maxSugar=${maxSugar}`; 
+        
+        // --- 3. BÚSQUEDA EN SPOONACULAR (con inglés Y CACHÉ Y FILTROS) ---
+
+        // a. Crear clave de caché ÚNICA que incluye ingredientes Y filtros
+        const spoonacularSearchCacheKey = `spoonacular:search:${ingredientsCommaSeparated}:${filtersQueryString}`;
+        let data; 
 
         // b. Buscar en el caché de MongoDB
         const cachedSearch = await CacheEntry.findOne({ cacheKey: spoonacularSearchCacheKey });
 
         if (cachedSearch) {
-          // Cache Hit! Usamos los datos guardados
           data = cachedSearch.data;
-          console.log(`[DB CACHE HIT] Búsqueda Spoonacular para: "${ingredientsCommaSeparated}"`);
+          console.log(`[DB CACHE HIT] Búsqueda Spoonacular para: "${ingredientsCommaSeparated}${filtersQueryString}"`);
         } else {
-          // Cache Miss! Hacemos la llamada a Spoonacular
-          console.log(`[DB CACHE MISS] Llamando a Spoonacular Search para: "${ingredientsCommaSeparated}"`); 
+          console.log(`[DB CACHE MISS] Llamando a Spoonacular Search para: "${ingredientsCommaSeparated}${filtersQueryString}"`); 
 
-          const url = `https://api.spoonacular.com/recipes/findByIngredients?apiKey=${SPOONACULAR_API_KEY}&ingredients=${ingredientsCommaSeparated}&number=5&ranking=1&maxMissingIngredients=2`;
+          // c. CONSTRUIR URL FINAL (Usando complexSearch y los filtros)
+          const url = `https://api.spoonacular.com/recipes/complexSearch?apiKey=${SPOONACULAR_API_KEY}&query=recipe&includeIngredients=${ingredientsCommaSeparated}&number=10&fillIngredients=true&ignorePantry=true${filtersQueryString}`;
+          
           const respuesta = await fetch(url); 
-          data = await respuesta.json(); // Obtenemos los datos up to date
+          data = await respuesta.json(); 
 
           if (!respuesta.ok) {
-            console.error("❌ ERROR DE SPOONACULAR (Search):", { 
-                status: respuesta.status, 
-                statusText: respuesta.statusText,
-                body: data 
-            });
+            console.error("❌ ERROR DE SPOONACULAR (Search):", { status: respuesta.status, statusText: respuesta.statusText, body: data });
             throw new Error("Error al llamar a Spoonacular API (Search).");
           }
 
-          // GUARDAMOS la respuesta actualizada en MongoDB
+          // d. GUARDAR en MongoDB (Spoonacular devuelve 'results' en complexSearch)
           await CacheEntry.create({
             cacheKey: spoonacularSearchCacheKey,
-            data: data // Guardamos el array de recetas completo
+            data: data.results // Guardamos solo el array de resultados
           });
+          
+          data = data.results; // Aseguramos que 'data' sea el array
         }
 
-        // c. Validar si data está vacío 
         if (!data || data.length === 0) {
-            return res.status(200).json([]); // No se encontraron recetas
+            return res.status(200).json([]); 
         }
 
         // --- 3. TRADUCCIÓN DE RECETAS (EN -> ES) ---
