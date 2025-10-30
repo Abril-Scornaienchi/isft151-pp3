@@ -25,12 +25,15 @@ Lo crucial: Este archivo **coordina** la aplicación, pero el módulo 'userServi
  */
 
 // Carga las variables de entorno del archivo .env
-require('dotenv').config();
+require('dotenv').config({ path: '../.env' });
 // 1. IMPORTACIONES Y CONFIGURACIÓN INICIAL
 const express = require('express');
 // Importamos el módulo de servicio (nuestra lógica de negocio encapsulada)
 const userService = require('./services/userService'); 
+// Importamos el nuevo servicio de traducción
+const translationService = require('./services/translationService');
 const mongoose = require('mongoose');
+const CacheEntry = require('./models/CacheEntryModel'); 
 
 const DB_URI = process.env.MONGO_URI;
 const PORT = process.env.PORT || 3000;
@@ -320,50 +323,138 @@ app.delete('/api/inventario/:alimentoId', checkAuth, async (req, res) => {
  */
 app.get('/api/recetas/inventario', checkAuth, async (req, res) => { 
     try {
-        // 1. Obtener los ingredientes (la lista limpia que viene del Frontend)
+        // Ruta rápida: si el Frontend envía la lista y filtros, usamos complexSearch directo
         const ingredientsList = req.query.list;
-        
-        if (!ingredientsList || ingredientsList.length === 0) {
-             return res.status(200).json([]); 
-        }
-        
-        // 2. OBTENER FILTROS NUTRICIONALES Y DE DIETA
-        const { diet, maxCalories, maxCarbs, maxProtein, maxSugar } = req.query; 
+        if (ingredientsList && ingredientsList.length > 0) {
+            // 2. OBTENER FILTROS NUTRICIONALES Y DE DIETA
+            const { diet, maxCalories, maxCarbs, maxProtein, maxSugar } = req.query; 
 
-        // 3. CONSTRUIR CADENA DE FILTROS ADICIONALES
-        let filters = '';
-        if (diet) filters += `&diet=${diet}`;
-        if (maxCalories) filters += `&maxCalories=${maxCalories}`;
-        if (maxCarbs) filters += `&maxCarbs=${maxCarbs}`;
-        if (maxProtein) filters += `&maxProtein=${maxProtein}`;
-        if (maxSugar) filters += `&maxSugar=${maxSugar}`; 
-        
-        // 4. CONSTRUIR URL FINAL
-        const url = `https://api.spoonacular.com/recipes/complexSearch?apiKey=${SPOONACULAR_API_KEY}&query=recipe&includeIngredients=${ingredientsList}&number=100&fillIngredients=true&ignorePantry=true${filters}`;        console.log("URL de Spoonacular enviada:", url); // <--- AÑADE ESTA LÍNEA
-        const respuesta = await fetch(url, { 
-            headers: { 'Cache-Control': 'no-cache', 'Accept': 'application/json' } 
-        });
+            // 3. CONSTRUIR CADENA DE FILTROS ADICIONALES
+            let filters = '';
+            if (diet) filters += `&diet=${diet}`;
+            if (maxCalories) filters += `&maxCalories=${maxCalories}`;
+            if (maxCarbs) filters += `&maxCarbs=${maxCarbs}`;
+            if (maxProtein) filters += `&maxProtein=${maxProtein}`;
+            if (maxSugar) filters += `&maxSugar=${maxSugar}`; 
 
-        if (!respuesta.ok) {
-            // Si hay un error (ej: 401, 402), lee el error como TEXTO para evitar el crash.
-            const errorText = await respuesta.text(); 
-            console.error("ERROR API SPOONACULAR:", respuesta.status, errorText);
-            
-            // Devuelve un error 500 al frontend para indicar el fallo externo.
-            return res.status(500).json({ 
-                error: `Error de API Externa [${respuesta.status}]. Verifique la clave o cuota.`,
-                details: errorText
+            // 4. CONSTRUIR URL FINAL
+            const url = `https://api.spoonacular.com/recipes/complexSearch?apiKey=${SPOONACULAR_API_KEY}&query=recipe&includeIngredients=${ingredientsList}&number=100&fillIngredients=true&ignorePantry=true${filters}`;
+            console.log("URL de Spoonacular enviada:", url);
+            const respuesta = await fetch(url, { 
+                headers: { 'Cache-Control': 'no-cache', 'Accept': 'application/json' } 
             });
-        }
-        
-        // Si la respuesta fue 200 OK, ahora SÍ leemos el JSON.
-        const data = await respuesta.json();
 
-        return res.status(200).json(data); 
+            if (!respuesta.ok) {
+                // Si hay un error (ej: 401, 402), lee el error como TEXTO para evitar el crash.
+                const errorText = await respuesta.text(); 
+                console.error("ERROR API SPOONACULAR:", respuesta.status, errorText);
+                
+                // Devuelve un error 500 al frontend para indicar el fallo externo.
+                return res.status(500).json({ 
+                    error: `Error de API Externa [${respuesta.status}]. Verifique la clave o cuota.`,
+                    details: errorText
+                });
+            }
+            
+            // Si la respuesta fue 200 OK, ahora SÍ leemos el JSON.
+            const data = await respuesta.json();
+            return res.status(200).json(data); 
+        }
+
+        const separador = "|||"; // Usaremos un separador único
+
+        // --- 1. TRADUCCIÓN DE INVENTARIO (ES -> EN) ---
+
+        // a. Obtener inventario en español
+        const inventario = await userService.getAlimentosByUsuario(req.userId); 
+        const spanishIngredients = inventario.map(item => item.article_name);
+
+        if (spanishIngredients.length === 0) {
+            return res.status(200).json([]); // Devuelve array vacío si no hay ingredientes
+        }
+
+        // b. Agruparlos en un solo string
+        const joinedSpanishIngredients = spanishIngredients.join(separador);
+        const ingredientsPrompt = `Translate the following list of kitchen ingredients to English. Keep the exact same separator ("${separador}") between each item: "${joinedSpanishIngredients}"`;
+
+        // c. Hacer UNA SOLA llamada a Gemini
+        const translatedIngredientsString = await translationService.translateText(ingredientsPrompt, 'es', 'en');
+
+        if (!translatedIngredientsString) {
+            throw new Error("La traducción de ingredientes (ES->EN) falló.");
+        }
+
+        // d. Convertir de vuelta a un array y unir para Spoonacular
+        const englishIngredients = translatedIngredientsString.split(separador).map(s => s.trim());
+        const ingredientsCommaSeparated = englishIngredients.join(',');
+
+        // --- 2. BÚSQUEDA EN SPOONACULAR (con inglés y CACHÉ) ---
+
+        // a. Crear clave de caché para la búsqueda por ingredientes
+        const spoonacularSearchCacheKey = `spoonacular:search:${ingredientsCommaSeparated}`;
+        let data; // Variable para guardar los datos de Spoonacular (cacheados o nuevos)
+
+        // b. Buscar en el caché de MongoDB
+        const cachedSearch = await CacheEntry.findOne({ cacheKey: spoonacularSearchCacheKey });
+
+        if (cachedSearch) {
+          // Cache Hit! Usamos los datos guardados
+          data = cachedSearch.data;
+          console.log(`[DB CACHE HIT] Búsqueda Spoonacular para: "${ingredientsCommaSeparated}"`);
+        } else {
+          // Cache Miss! Hacemos la llamada a Spoonacular
+          console.log(`[DB CACHE MISS] Llamando a Spoonacular Search para: "${ingredientsCommaSeparated}"`); 
+
+          const url = `https://api.spoonacular.com/recipes/findByIngredients?apiKey=${SPOONACULAR_API_KEY}&ingredients=${ingredientsCommaSeparated}&number=5&ranking=1&maxMissingIngredients=2`;
+          const respuesta = await fetch(url); 
+          data = await respuesta.json(); // Obtenemos los datos up to date
+
+          if (!respuesta.ok) {
+            console.error("❌ ERROR DE SPOONACULAR (Search):", { 
+                status: respuesta.status, 
+                statusText: respuesta.statusText,
+                body: data 
+            });
+            throw new Error("Error al llamar a Spoonacular API (Search).");
+          }
+
+          // GUARDAMOS la respuesta actualizada en MongoDB
+          await CacheEntry.create({
+            cacheKey: spoonacularSearchCacheKey,
+            data: data // Guardamos el array de recetas completo
+          });
+        }
+
+        // c. Validar si data está vacío 
+        if (!data || data.length === 0) {
+            return res.status(200).json([]); // No se encontraron recetas
+        }
+
+        // --- 3. TRADUCCIÓN DE RECETAS (EN -> ES) ---
+
+        // a. Agrupar todos los títulos de recetas en un solo string
+        const englishTitles = data.map(recipe => recipe.title);
+        const joinedEnglishTitles = englishTitles.join(separador);
+        const titlesPrompt = `Translate the following list of recipe titles to Spanish. Keep the exact same separator ("${separador}") between each item: "${joinedEnglishTitles}"`;
+
+        // b. Hacer UNA SOLA llamada a Gemini
+        const translatedTitlesString = await translationService.translateText(titlesPrompt, 'en', 'es');
+
+        let translatedTitles = translatedTitlesString ? translatedTitlesString.split(separador).map(s => s.trim()) : [];
+
+        // c. Crear el array final, reemplazando los títulos
+        const translatedData = data.map((recipe, index) => ({
+            ...recipe, // Copiamos datos originales (id, image, missedIngredients, etc.)
+            // Usamos el título traducido, o el original si la traducción falló
+            title: translatedTitles[index] || recipe.title, 
+        }));
+
+        // 4. Enviar los datos TRADUCIDOS al frontend
+        res.status(200).json(translatedData); 
 
     } catch (error) {
-        console.error("ERROR CRÍTICO AL BUSCAR RECETAS:", error.message);
-        return res.status(500).json({ error: 'Error interno al buscar recetas.', details: error.message });
+        console.error("❌ ERROR DETALLADO EN GET /api/recetas/inventario:", error); 
+        res.status(500).json({ error: 'Error interno al buscar recetas.', details: error.message });
     }
 });
 
@@ -376,18 +467,104 @@ app.get('/api/recetas/detalles/:recipeId', async (req, res) => {
     const recipeId = req.params.recipeId;
     
     try {
-        // La clave API se lee del entorno del servidor (seguro)
-        const url = `https://api.spoonacular.com/recipes/${recipeId}/information?apiKey=${SPOONACULAR_API_KEY}`;
-        
-        const respuesta = await fetch(url);
-        const data = await respuesta.json();
-        
-        if (!respuesta.ok) {
-            // Reenviar el error si Spoonacular falla (ej: receta no existe)
+        // a. Crear clave de caché para los detalles de esta receta
+        const spoonacularDetailsCacheKey = `spoonacular:details:${recipeId}`;
+        let data; // Variable para los detalles
+
+        // b. Buscar en el caché de MongoDB
+        const cachedDetails = await CacheEntry.findOne({ cacheKey: spoonacularDetailsCacheKey });
+
+        if (cachedDetails) {
+          // ¡Cache Hit!
+          data = cachedDetails.data;
+          console.log(`[DB CACHE HIT] Detalles Spoonacular para ID: "${recipeId}"`);
+        } else {
+          // ¡Cache Miss!
+          console.log(`[DB CACHE MISS] Llamando a Spoonacular Details para ID: "${recipeId}"`);
+
+          const url = `https://api.spoonacular.com/recipes/${recipeId}/information?apiKey=${SPOONACULAR_API_KEY}`;
+          const respuesta = await fetch(url);
+          data = await respuesta.json(); // Datos actualizados
+
+          if (!respuesta.ok) {
+            console.error("❌ ERROR DE SPOONACULAR (Details):", { 
+                status: respuesta.status, 
+                statusText: respuesta.statusText,
+                body: data 
+            });
+            // Reenviar el error si Spoonacular falla
             return res.status(respuesta.status).json({ error: 'Error de la API externa al obtener detalles.', details: data.message });
+          }
+
+          // GUARDAMOS la respuesta nueva en MongoDB
+          await CacheEntry.create({
+            cacheKey: spoonacularDetailsCacheKey,
+            data: data // Guardamos el objeto de detalles completo
+          });
+          console.log(`[DB CACHE SAVED] Detalles Spoonacular para ID: "${recipeId}"`);
+        }
+        
+        
+        // 1. (Igual que antes) Traducciones individuales para campos grandes
+        const translatedTitlePromise = translationService.translateText(data.title, 'en', 'es');
+        const translatedSummaryPromise = translationService.translateText(data.summary, 'en', 'es');
+        const translatedInstructionsPromise = translationService.translateText(data.instructions, 'en', 'es');
+
+        // 2. [NUEVA LÓGICA] Agrupación de ingredientes
+
+        // Extraemos todos los strings de ingredientes
+        const originalIngredientStrings = data.extendedIngredients.map(ing => ing.original);
+
+        // Definimos un separador ÚNICO que no exista en el texto
+        const separator = "|||"; 
+
+        // Unimos todos los ingredientes en UN SOLO string
+        const joinedIngredientString = originalIngredientStrings.join(separator);
+
+        // 3. [NUEVA PROMESA] Creamos UN solo prompt para TODOS los ingredientes
+        const ingredientsPrompt = `Translate the following list of ingredients to Spanish. Keep the exact same separator ("${separator}") between each item: "${joinedIngredientString}"`;
+
+        const translatedIngredientsPromise = translationService.translateText(ingredientsPrompt, 'en', 'es');
+
+        // 4. [NUEVO Promise.all] Esperamos a que las 4 llamadas terminen
+        //    (Esto reduce de ~18 llamadas a solo 4)
+        const [
+            translatedTitle,
+            translatedSummary,
+            translatedInstructions,
+            translatedJoinedString // Esto es un solo string con los ingredientes traducidos
+        ] = await Promise.all([
+            translatedTitlePromise,
+            translatedSummaryPromise,
+            translatedInstructionsPromise,
+            translatedIngredientsPromise 
+        ]);
+
+        // 5. [NUEVA LÓGICA] Separamos el string traducido de vuelta a un array
+        let translatedIngredients = [];
+        if (translatedJoinedString) {
+            // Usamos el mismo separador para volver a crear el array
+            translatedIngredients = translatedJoinedString.split(separator);
         }
 
-        res.status(200).json(data); 
+        // 6. Construimos el objeto de receta traducido final
+        const translatedData = {
+            ...data, // Copiamos datos originales (id, image, etc.)
+            title: translatedTitle || data.title, // Usamos traducido o el original
+            summary: translatedSummary || data.summary,
+            instructions: translatedInstructions || data.instructions,
+            // Re-mapeamos los ingredientes para asignar la traducción correcta
+            extendedIngredients: data.extendedIngredients.map((ing, index) => {
+                return {
+                    ...ing, // Copiamos datos del ingrediente original (amount, unit, etc.)
+                    // Asignamos la traducción del array o el original si algo falló
+                    original: (translatedIngredients[index] ? translatedIngredients[index].trim() : ing.original),
+                };
+            })
+        };
+
+        // 7. Enviamos los datos TRADUCIDOS al frontend
+        res.status(200).json(translatedData);
 
     } catch (error) {
         // Manejo de errores de red o internos del servidor
