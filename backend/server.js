@@ -25,7 +25,7 @@ Lo crucial: Este archivo **coordina** la aplicación, pero el módulo 'userServi
  */
 
 // Carga las variables de entorno del archivo .env
-require('dotenv').config();
+require('dotenv').config({ path: '../.env' });
 // 1. IMPORTACIONES Y CONFIGURACIÓN INICIAL
 const express = require('express');
 // Importamos el módulo de servicio (nuestra lógica de negocio encapsulada)

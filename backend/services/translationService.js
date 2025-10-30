@@ -1,5 +1,5 @@
 // 1. Carga las variables de entorno (para la clave API de Gemini)
-require('dotenv').config();
+require('dotenv').config({ path: '../.env' });
 
 // 2. Importa la librería de Google AI
 const { GoogleGenerativeAI } = require("@google/generative-ai");
