@@ -194,9 +194,28 @@ app.post('/api/inventario', checkAuth, async (req, res) => {
     }
 
     try {
-        const nuevoAlimento = await userService.createOrUpdateAlimento(req.userId, article_name, quantity, unit);
+        // 1. Traducimos el nombre del artículo (ES -> EN)
+        const english_article_name = await translationService.translateText(article_name, 'es', 'en');
+
+        // 2. Validación: ¿Falló la traducción?
+        if (!english_article_name) {
+            console.error(`Error al traducir el ingrediente: "${article_name}"`);
+            return res.status(500).json({ error: 'Error al procesar el nombre del ingrediente.' });
+        }
+
+        // 3. Llamamos al userService con el nombre YA TRADUCIDO al inglés
+        // Usamos createOrUpdateAlimento para que funcione con los filtros
+        const nuevoAlimento = await userService.createOrUpdateAlimento(
+            req.userId, 
+            english_article_name.toLowerCase(), // Guardamos en minúscula
+            quantity, 
+            unit
+        );
+
+        // 4. Respondemos al frontend (como antes)
         res.status(201).json(nuevoAlimento); 
     } catch (error) {
+        console.error('Error interno al agregar alimento:', error.message);
         res.status(500).json({ error: 'Error interno al agregar alimento.' }); 
     }
 });
@@ -348,6 +367,9 @@ app.get('/api/recetas/inventario', checkAuth, async (req, res) => {
 
         // d. Convertir de vuelta a un array y unir para Spoonacular
         const englishIngredients = translatedIngredientsString.split(separador).map(s => s.trim());
+
+        englishIngredients.sort(); // Ordena alfabéticamente para que el caché sea consistente
+        
         const ingredientsCommaSeparated = englishIngredients.join(',');
 
         // --- 2. OBTENER FILTROS ( Fusión de la lógica) ---

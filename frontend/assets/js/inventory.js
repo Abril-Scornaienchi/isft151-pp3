@@ -266,70 +266,62 @@ async function handleUpdateItem(alimentoId) {
  * aplicando filtros nutricionales y de dieta.
  */
 async function handleSearchRecipes() {
-    // 1. OBTENER VALORES DE FILTRO DEL FORMULARIO
+    
+    // 1. LEER LOS FILTROS DE LA BARRA LATERAL (¡NUEVO!)
     const diet = document.getElementById('diet_preference').value;
     const maxCalories = document.getElementById('maxCalories').value;
     const maxCarbs = document.getElementById('maxCarbs').value;
     const maxProtein = document.getElementById('maxProtein').value;
     const maxSugar = document.getElementById('maxSugar').value; 
 
-    // 2. FETCH: OBTENER EL INVENTARIO COMPLETO (SIN FILTRAR)
-    const inventoryResponse = await fetch(`${BACKEND_URL}/inventario?userId=${currentUserId}`);
-    const rawInventory = await inventoryResponse.json();
+    // 2. CONSTRUIR LA CADENA DE QUERY CON LOS FILTROS
+    let filterQuery = '';
+    if (diet && diet !== "") filterQuery += `&diet=${diet}`;
+    if (maxCalories) filterQuery += `&maxCalories=${maxCalories}`;
+    if (maxCarbs) filterQuery += `&maxCarbs=${maxCarbs}`;
+    if (maxProtein) filterQuery += `&maxProtein=${maxProtein}`;
+    if (maxSugar) filterQuery += `&maxSugar=${maxSugar}`;
+
     
-    // Si la carga del inventario falló o está vacío
-    if (!inventoryResponse.ok || !rawInventory || rawInventory.length === 0) {
-        alert('Error al cargar inventario o está vacío. Asegúrate de tener artículos guardados.');
-        renderRecipes([]);
-        return;
+    // Activa la vista de dos columnas
+    document.querySelector('.home-container').classList.add('recipe-view-active');
+
+    const inventoryBody = document.getElementById('inventory-body');
+    if (!inventoryBody || inventoryBody.children.length === 0 || (inventoryBody.children.length === 1 && inventoryBody.children[0].children.length === 1)) {
+        alert('Debes agregar al menos un ingrediente...');
+        renderRecipes([]); 
+        return; 
     }
-
-    // 4. CONSTRUIR LA LISTA FINAL (Anti-Sobrecarga y Anti-Duplicados)
-    // Se usa Set para asegurar que 'papa' y 'Papa' no se cuenten doble si Mongoose los devolvió mal
-    const uniqueIngredients = new Set(rawInventory.map(item => item.article_name));
-    const sortedList = Array.from(uniqueIngredients).sort(); 
-    // Usamos .slice(0, 5) para tomar solo los primeros 5 elementos de la lista ordenada
-    const limitedList = sortedList.slice(0, 6);
-    // Ahora, construimos la URL solo con los 5 mejores ingredientes:
-    const rawList = limitedList.join(',');
-    const ingredientsList = encodeURIComponent(rawList);
-
-
-    // 5. CONSTRUIR PARÁMETROS NUTRICIONALES
-    let filterParams = '';
-    
-    // Incluimos la dieta y filtros numéricos solo si tienen valor
-    if (diet) filterParams += `&diet=${diet}`;
-    if (maxCalories) filterParams += `&maxCalories=${maxCalories}`;
-    if (maxCarbs) filterParams += `&maxCarbs=${maxCarbs}`;
-    if (maxProtein) filterParams += `&maxProtein=${maxProtein}`;
-    if (maxSugar) filterParams += `&maxSugar=${maxSugar}`; 
     
     try {
-        // 6. FETCH FINAL: ENVIAR LA LISTA LIMPIA DE INGREDIENTES AL BACKEND
-        const response = await fetch(`${BACKEND_URL}/recetas/inventario?userId=${currentUserId}&list=${ingredientsList}${filterParams}`);
+        // 3. AÑADIMOS LOS FILTROS Y LA OPCIÓN DE NO-CACHE
+        const response = await fetch(`${BACKEND_URL}/recetas/inventario?userId=${currentUserId}${filterQuery}`, {
+            method: 'GET',
+            cache: 'no-store'
+        });
         
         const data = await response.json();
 
         if (!response.ok) {
-            // Manejo de error de API (401/402)
-            throw new Error(data.error || 'Error al buscar recetas. (Verificar API Key)');
+            // Si el error es 402 (Límite de Spoonacular), avisamos
+            if (response.status === 402) {
+                 throw new Error('Se ha superado la cuota diaria de la API de recetas. Inténtalo mañana.');
+            }
+            throw new Error(data.error || 'Error al buscar recetas.');
         }
 
-        const recipesList = data.results || [];
-        // 1. OBTENER el contenedor principal
-        const homeContainer = document.querySelector('.home-container');
-        // 2. AÑADIR la clase para activar el diseño de dos columnas
-        if (homeContainer) {
-            homeContainer.classList.add('recipe-view-active');
+        if (data && data.length > 0) {
+            renderRecipes(data); 
+        } else {
+            renderRecipes([]); 
+            alert("No se encontraron recetas con tus ingredientes y filtros.");
         }
-    
-        renderRecipes(recipesList);
 
     } catch (error) {
         console.error('Fallo al buscar recetas:', error.message);
         alert('Fallo al buscar recetas: ' + error.message);
-        return;
+        document.querySelector('.home-container').classList.remove('recipe-view-active');
+        renderRecipes([]);
     }
 }
 
