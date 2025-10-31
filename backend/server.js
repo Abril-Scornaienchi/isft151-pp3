@@ -412,7 +412,7 @@ app.get('/api/recetas/inventario', checkAuth, async (req, res) => {
           console.log(`[DB CACHE MISS] Llamando a Spoonacular Search para: "${ingredientsList}" con filtros.`); 
           
           // e. CONSTRUIR URL FINAL (usando complexSearch)
-          const url = `https://api.spoonacular.com/recipes/complexSearch?apiKey=${SPOONACULAR_API_KEY}&query=recipe&includeIngredients=${encodeURIComponent(ingredientsList)}&number=20&fillIngredients=true&ignorePantry=true${filters}`;
+          const url = `https://api.spoonacular.com/recipes/findByIngredients?apiKey=${SPOONACULAR_API_KEY}&ingredients=${encodeURIComponent(ingredientsList)}&number=20&ranking=1&ignorePantry=true`;
           console.log("URL de Spoonacular construida:", url); // DEBUG LOG
 
           const respuesta = await fetch(url); 
@@ -424,7 +424,7 @@ app.get('/api/recetas/inventario', checkAuth, async (req, res) => {
             throw new Error("Error al llamar a Spoonacular API (Search).");
           }
           
-          data = responseData.results; // Extraemos el array de resultados
+          data = responseData; // Para findByIngredients, la respuesta es directamente el array
 
           // GUARDAMOS la respuesta actualizada en MongoDB
           await CacheEntry.create({
