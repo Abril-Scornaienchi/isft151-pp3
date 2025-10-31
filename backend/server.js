@@ -412,7 +412,7 @@ app.get('/api/recetas/inventario', checkAuth, async (req, res) => {
           console.log(`[DB CACHE MISS] Llamando a Spoonacular Search para: "${ingredientsList}" con filtros.`); 
           
           // e. CONSTRUIR URL FINAL (usando complexSearch)
-          const url = `https://api.spoonacular.com/recipes/complexSearch?apiKey=${SPOONACULAR_API_KEY}&includeIngredients=${ingredientsList}&number=20&fillIngredients=true&ignorePantry=true${filters}`;
+          const url = `https://api.spoonacular.com/recipes/complexSearch?apiKey=${SPOONACULAR_API_KEY}&query=recipe&includeIngredients=${encodeURIComponent(ingredientsList)}&number=20&fillIngredients=true&ignorePantry=true${filters}`;
           console.log("URL de Spoonacular construida:", url); // DEBUG LOG
 
           const respuesta = await fetch(url); 
