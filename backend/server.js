@@ -38,6 +38,7 @@ const CacheEntry = require('./models/CacheEntryModel');
 const DB_URI = process.env.MONGO_URI;
 const PORT = process.env.PORT || 3000;
 const app = express();
+app.disable('etag');
 const SPOONACULAR_API_KEY = process.env.SPOONACULAR_API_KEY;
 
 const User_data = require('./models/User_data'); 
@@ -412,8 +413,11 @@ app.get('/api/recetas/inventario', checkAuth, async (req, res) => {
           
           // e. CONSTRUIR URL FINAL (usando complexSearch)
           const url = `https://api.spoonacular.com/recipes/complexSearch?apiKey=${SPOONACULAR_API_KEY}&includeIngredients=${ingredientsList}&number=20&fillIngredients=true&ignorePantry=true${filters}`;
+          console.log("URL de Spoonacular construida:", url); // DEBUG LOG
+
           const respuesta = await fetch(url); 
           const responseData = await respuesta.json();
+          console.log("Respuesta cruda de Spoonacular:", JSON.stringify(responseData, null, 2)); // DEBUG LOG
 
           if (!respuesta.ok) {
             console.error("❌ ERROR DE SPOONACULAR (Search):", { status: respuesta.status, statusText: respuesta.statusText, body: responseData });
