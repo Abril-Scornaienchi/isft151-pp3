@@ -431,12 +431,6 @@ form button[type="submit"]:hover {
     box-sizing: border-box;
 }
 
-/* 3. El layout principal YA NO CAMBIA A FLEX */
-.home-container.recipe-view-active {
-    /* Ya no es flex, se queda como un bloque */
-    /* Ya no cambia el max-width, se queda en 960px */
-}
-
 /* 4. El panel de recetas APARECE ABAJO (en lugar de al lado) */
 .home-container.recipe-view-active #recipe-panel {
     display: block; /* Se hace visible */

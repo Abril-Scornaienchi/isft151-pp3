@@ -475,12 +475,20 @@ function setupAudioInput() {
     });
 }
 
+/**
+ * @brief Normaliza el nombre de la unidad transcrita para que coincida con los valores ENUM de Mongoose.
+ * (VERSIÓN CORREGIDA Y LIMPIA - Fiel al original)
+ * @param {string} unit - La unidad obtenida de la transcripción de voz.
+ * @returns {string} La unidad ('kilogramos', 'mililitros', etc.).
+ */
 function normalizeUnit(unit) {
     const u = unit.toLowerCase().trim();
     if (u.startsWith('kilo') || u.startsWith('kg')) return 'kilogramos';
-    if (u.includes('gramo') || u.includes('gr')) return 'gramos';    
+    // Se añade "u === 'g'" para capturar la abreviatura de "gramos" que transcribe el motor de voz.
+    if (u.includes('gramo') || u.includes('gr') || u === 'g') return 'gramos';    
     if (u.startsWith('litro') || u.startsWith('lt')) return 'litros';
     if (u.startsWith('mililitro') || u.startsWith('ml')) return 'mililitros';
     if (u.startsWith('unida')) return 'unidades';
+    
     return 'unidades'; 
 }
