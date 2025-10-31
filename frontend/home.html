@@ -62,47 +62,51 @@
                 </button>
                 <p id="speechResult" style="margin-top: 10px; color: green;"></p>
             </form>
-
+        </div>      
         <hr>
-                <div class="section-box">
-                    <h2>Buscar Recetas</h2>
-                    <button type="button" id="search-recipes-btn">Buscar Recetas</button>       
-             </div>
-            <div class="section-box" style="margin-top: 30px;">
-                <h2>Mi Inventario</h2>
-                <table class="inventory-table">
-                    <thead>
-                        <tr>
-                            <th>Nombre</th>
-                            <th>Cantidad</th>
-                            <th>Unidad</th>
-                            <th>Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody id="inventory-body">
+
+        <div class="section-box" style="text-align: center;">
+            <h2>Buscar Recetas</h2>
+            <button type="button" id="search-recipes-btn">Buscar Recetas</button>       
+        </div>
+
+        <div class="section-box" style="margin-top: 30px;">
+            <h2>Mi Inventario</h2>
+            <table class="inventory-table">
+                <thead>
+                    <tr>
+                        <th>Nombre</th>
+                        <th>Cantidad</th>
+                        <th>Unidad</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="inventory-body">
                         </tbody>
-                </table>
+            </table>
+        </div>
 
         <hr>
-        <p><a href="#" id="logout-link">Cerrar Sesión</a></p>
+        <p style="text-align: center;"><a href="#" id="logout-link">Cerrar Sesión</a></p>
 
     </div> <!-- Cierre de #main-content -->
 
     <!-- El panel de recetas es hermano de #main-content -->
     <div id="recipe-panel">
         <h2 id="recipe-panel-title">Recetas Encontradas</h2>
-        <div id="recipes-list-cards"></div>
+        <div id="recipes-list-cards">
+        </div>
     </div>
 
     </div> <!-- Cierre de .container.home-container -->
 
-        <script src="./assets/js/inventory.js"></script> 
+    <script src="./assets/js/inventory.js"></script> 
 
-        <div id="recipe-modal" class="modal-overlay">
+    <div id="recipe-modal" class="modal-overlay">
         <div class="modal-content">
             <button id="modal-close-btn" class="modal-close">&times;</button>
             <div id="modal-body">
-                </div>
+            </div>
         </div>
     </div>
 

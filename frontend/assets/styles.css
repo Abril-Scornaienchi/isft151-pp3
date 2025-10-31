@@ -192,16 +192,6 @@ form button[type="submit"]:hover {
     padding-bottom: 20px;
 }
 
-/* CUANDO la vista de recetas está activa... */
-.home-container.recipe-view-active .form-wrapper {
-    /* ...quitamos el centrado automático... */
-    margin-left: 0; 
-    margin-right: 0;
-    /* ...y podemos quitarle el ancho máximo si quieres que ocupe todo el espacio izquierdo */
-    /* max-width: none; */ /* Descomenta esta línea si quieres que se ensanche */
-}
-
-
 /* =================================================================
  * 5. Estilos Específicos para Páginas
  * ================================================================= */
@@ -422,69 +412,43 @@ form button[type="submit"]:hover {
 }
 
 /* =================================================================
- * 9. ESTILOS DEL LAYOUT (DOS COLUMNAS) Y TARJETAS DE RECETA
+ * 9. ESTILOS DEL LAYOUT (AHORA UNA SOLA COLUMNA) Y TARJETAS DE RECETA
  * ================================================================= */
 
-/* 2. Columna Izquierda (Inventario) - Estilos por defecto */
+/* 1. Contenido principal (Inventario, Form, etc.) */
 #main-content {
     width: 100%; /* Ocupa todo el ancho por defecto */
     box-sizing: border-box;
-    transition: all 0.5s ease-in-out; 
 }
 
-/* 3. Columna Derecha (Recetas) - OCULTA COMPLETAMENTE POR DEFECTO */
+/* 2. Panel de Recetas - OCULTO POR DEFECTO */
 #recipe-panel {
     display: none; /* Totalmente oculta y no ocupa espacio */
-    flex-basis: 0%; 
-    opacity: 0;
-    overflow: hidden; 
-    transition: all 0.5s ease-in-out;
-    border-left: 2px solid #f0f0f0;
-    padding-left: 0; /* Sin padding cuando está oculta */
+    width: 100%; /* Ocupará el ancho del contenedor padre */
+    margin-top: 40px; /* Espacio superior para separarlo del inventario */
+    border-top: 2px solid #f0f0f0; /* Línea divisoria bonita */
+    padding-top: 20px; /* Espacio interno superior */
     box-sizing: border-box;
-    height: 90vh; 
-    overflow-y: auto;
 }
 
-
-/* El layout principal CAMBIA A FLEX y se ensancha */
+/* 3. El layout principal YA NO CAMBIA A FLEX */
 .home-container.recipe-view-active {
-    display: flex;         
-    flex-wrap: nowrap;     
-    max-width: 1200px;     /* Se ensancha para las dos columnas */
+    /* Ya no es flex, se queda como un bloque */
+    /* Ya no cambia el max-width, se queda en 960px */
 }
 
-/* La columna izquierda SE ENCOGE */
-.home-container.recipe-view-active #main-content {
-    flex-basis: 60%; 
-    flex-shrink: 0;
-    padding-right: 30px; /* Añadimos separación */
-}
-
-/* El panel de recetas APARECE */
+/* 4. El panel de recetas APARECE ABAJO (en lugar de al lado) */
 .home-container.recipe-view-active #recipe-panel {
     display: block; /* Se hace visible */
-    flex-basis: 40%; 
     opacity: 1;
-    padding-left: 30px; /* Añadimos padding */
 }
 
-
-/* 5. Estilo del CONTENEDOR de las tarjetas */
+/* 5. Estilo del CONTENEDOR de las tarjetas (se centra solo) */
 #recipes-list-cards {
     display: grid;
-    /* responsive grid: crea tantas columnas como quepan, 
-     * donde cada una mide MÍNIMO 150px pero puede crecer (1fr)
-     */
-    /* 1. Aumentamos el mínimo para que sea más difícil crear 2 columnas */
+    /* Esto crea una grilla responsiva que se auto-centra */
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); 
     gap: 15px; /* Espacio entre tarjetas */
-    
-    /* 2. Hacemos que la cuadrícula ocupe toda la altura del panel */
-    height: 100%; 
-    
-    /* 3. (Opcional) Alinea las tarjetas arriba si sobra espacio vertical */
-    align-content: start; 
 }
 
 /* 6. Estilo de CADA TARJETA individual */
@@ -519,6 +483,7 @@ form button[type="submit"]:hover {
 
 /* =================================================================
  * 10. ESTILOS PARA EL MODAL DE DETALLES DE RECETA
+ * (CON ALINEACIÓN A LA IZQUIERDA CORREGIDA)
  * ================================================================= */
 
 /* 1. El fondo oscuro semitransparente (Overlay) */
@@ -575,6 +540,7 @@ form button[type="submit"]:hover {
     color: #333;
     border-bottom: 1px solid #eee;
     padding-bottom: 10px;
+    text-align: left; /* <-- CORRECCIÓN */
 }
 
 #modal-body img { /* Imagen de la receta */
@@ -582,21 +548,32 @@ form button[type="submit"]:hover {
     height: auto;
     border-radius: 8px;
     margin-bottom: 20px;
+    /* Centrar la imagen correctamente */
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
 }
 
 #modal-body h3 { /* Subtítulos (Ingredientes, Pasos) */
     margin-top: 25px;
     color: #555;
     font-size: 1.2em;
+    text-align: left; /* <-- CORRECCIÓN */
 }
 
 #modal-body ul, #modal-body ol { /* Listas de ingredientes/pasos */
     padding-left: 20px;
     line-height: 1.6;
     color: #444;
+    text-align: left; /* <-- CORRECCIÓN */
 }
 #modal-body li {
     margin-bottom: 8px;
+}
+
+/* Alinear cualquier texto suelto (párrafos de instrucciones) a la izquierda */
+#modal-body p, #modal-body div {
+    text-align: left; /* <-- CORRECCIÓN */
 }
 /* =================================================================
  * 5. Estilos para el Sidebar de Filtros

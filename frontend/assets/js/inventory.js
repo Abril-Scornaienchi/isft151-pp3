@@ -164,7 +164,7 @@ async function handleSearchRecipes() {
 
     // 2. Construir el string de parámetros de consulta para los filtros
     let filterParams = '';
-    if (diet) filterParams += `&diet=${diet}`;
+    if (diet && diet !== 'none') filterParams += `&diet=${diet}`;
     if (maxCalories) filterParams += `&maxCalories=${maxCalories}`;
     if (maxCarbs) filterParams += `&maxCarbs=${maxCarbs}`;
     if (maxProtein) filterParams += `&maxProtein=${maxProtein}`;
