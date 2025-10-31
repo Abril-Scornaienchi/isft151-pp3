@@ -4,15 +4,43 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Inventario y Recetas</title>
-
-        <link rel="stylesheet" href="assets/styles.css"> 
-
-    </head>
+    <link rel="stylesheet" href="assets/styles.css"> 
+</head>
 <body>
-        <div class="container home-container">
+<div class="container home-container">
         
         <h1>Gestión de Despensa</h1>
         
+        <button id="menu-toggle-btn" class="menu-toggle-btn" type="button">
+            ☰ Mis Preferencias
+        </button>
+        <div id="filter-sidebar">
+            <div class="section-box sidebar-content">
+                <h2>Mis Preferencias</h2>
+                
+                <label for="diet_preference">Preferencia de Dieta:</label>
+                <select id="diet_preference">
+                    <option value="">Ninguna</option>
+                    <option value="vegetarian">Vegetariana</option>
+                    <option value="vegan">Vegana</option>
+                    <option value="gluten free">Libre de Gluten</option>
+                </select>
+                
+                <label for="maxCalories">Max. Calorías:</label>
+                <input type="number" id="maxCalories" placeholder="Max Calorías por porción" min="0">
+                
+                <label for="maxCarbs">Max. Carbohidratos (g):</label>
+                <input type="number" id="maxCarbs" placeholder="Max Carbohidratos (g)" min="0">
+
+                <label for="maxProtein">Max. Proteínas (g):</label>
+                <input type="number" id="maxProtein" placeholder="Max Proteínas (g)" min="0">
+
+                <label for="maxSugar">Max. Azúcares (g):</label>
+                <input type="number" id="maxSugar" placeholder="Max Azúcares (g)" min="0">
+
+                <button type="button" id="save-prefs-btn">Guardar Preferencias</button>
+            </div>
+        </div>
     <div id="main-content">
     
         <div class="section-box form-wrapper"> 
@@ -34,7 +62,12 @@
                 </button>
                 <p id="speechResult" style="margin-top: 10px; color: green;"></p>
             </form>
-            
+
+        <hr>
+                <div class="section-box">
+                    <h2>Buscar Recetas</h2>
+                    <button type="button" id="search-recipes-btn">Buscar Recetas</button>       
+             </div>
             <div class="section-box" style="margin-top: 30px;">
                 <h2>Mi Inventario</h2>
                 <table class="inventory-table">
@@ -49,13 +82,6 @@
                     <tbody id="inventory-body">
                         </tbody>
                 </table>
-            </div>
-        </div>
-        
-        <div class="section-box">
-             <h2>Recetas Sugeridas</h2>
-             <button id="search-recipes-btn">Buscar Recetas con mi Inventario</button>
-        </div>
 
         <hr>
         <p><a href="#" id="logout-link">Cerrar Sesión</a></p>

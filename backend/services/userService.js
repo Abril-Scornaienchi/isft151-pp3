@@ -98,6 +98,49 @@ async function registerUser(username, email, password) {
 }
 
 // -------------------------------------------------------------------
+// FUNCIONES DE PERFIL DE USUARIO
+// -------------------------------------------------------------------
+
+/**
+ * @brief Obtiene los datos del perfil de un usuario.
+ */
+async function getUserProfile(userId) {
+    // Seleccionamos solo los campos relevantes para el perfil
+    const profile = await User_data.findById(userId)
+        .select('diet_preference maxCalories maxCarbs maxProtein maxSugar')
+        .lean(); // .lean() para un objeto JS plano y rápido
+    return profile;
+}
+
+/**
+ * @brief Actualiza los datos del perfil de un usuario.
+ */
+async function updateUserProfile(userId, profileData) {
+    const allowedUpdates = ['diet_preference', 'maxCalories', 'maxCarbs', 'maxProtein', 'maxSugar'];
+    const updateFields = {};
+
+    // Filtramos para asegurar que solo se actualicen los campos permitidos
+    Object.keys(profileData).forEach(key => {
+        if (allowedUpdates.includes(key)) {
+            updateFields[key] = profileData[key];
+        }
+    });
+
+    if (Object.keys(updateFields).length === 0) {
+        return null; // No hay campos válidos para actualizar
+    }
+
+    const updatedUser = await User_data.findByIdAndUpdate(
+        userId,
+        { $set: updateFields },
+        { new: true, runValidators: true } // Opciones para devolver el doc actualizado y correr validaciones
+    ).select('diet_preference maxCalories maxCarbs maxProtein maxSugar').lean();
+
+    return updatedUser;
+}
+
+
+// -------------------------------------------------------------------
 // FUNCIONES DEL CRUD DE INVENTARIO
 // -------------------------------------------------------------------
 /**
@@ -158,7 +201,7 @@ async function createOrUpdateAlimento(userId, article_name, quantity, unit) {
  * Metodo READ del CRUD de Inventario.
  */
 async function getAlimentosByUsuario(userId) {
-    return await Inventory.find({ user: userId });
+    return await Inventory.find({ user: userId }).lean();
 }
 
 /**
@@ -222,6 +265,8 @@ module.exports = {
     findUserByCredentials,
     registerUser,
     initializeAdminUser,
+    getUserProfile,       // <-- Nueva función
+    updateUserProfile,    // <-- Nueva función
     findAlimentoByName,
     createOrUpdateAlimento, 
     getAlimentosByUsuario, 
