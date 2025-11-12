@@ -1,6 +1,6 @@
 # 📖 PROYECTO RECETAS Y DESPENSA (FP)
 
-Este documento contiene las instrucciones esenciales para configurar el entorno, instalar las dependencias e iniciar el servidor, permitiendo la ejecución del backend (API) y la aplicación web (frontend).
+Este documento contiene las instrucciones esenciales para configurar el entorno, instalar las dependencias e iniciar el servidor, permitiendo la ejecución del backend (API) y la aplicación web (frontend). De todas formas para iniciar la APP puede hacer doble click en cAe.bat (si es usuario de Windows).
 
 ## 1. ⚙️ Requisitos Previos
 
@@ -11,7 +11,39 @@ Necesitas tener instalado:
 
 > ⚠️ Nota de Base de Datos: Solo los administradores del proyecto (quienes gestionan la persistencia) necesitan tener una cuenta y un Cluster en MongoDB Atlas para la configuración inicial. Para la ejecución y compilación del proyecto, solo es necesario que el backend apunte a una URI de MongoDB funcional.
 
-## 2. 🔌 Configuración de la Conexión a la Base de Datos
+## 2. 🌳 Estructura de Directorios
+
+El proyecto está organizado en dos carpetas principales: `backend` y `frontend`
+
+├── backend/                  
+│   ├── models/
+	│   └── InventoryModel.js
+	│   └── User_data.js      
+	│   └── CacheEntryModel.js            
+│   ├── node_modules/            
+│   ├── scripts/
+	│   └── seedAdmin.js      
+│   ├── services/
+│	   └── userService.js
+│	   └── translationService.js             
+│   └── package.json
+│   └── package-lock.json
+│   └── server.js
+│   
+├── frontend/                 
+│   ├── assets/
+│	   ├── js/
+│			│   ├── auth.js
+│			│   ├── inventory.js	
+│   	├── styles.css/                  
+│   ├── home.html/   
+│   ├── index.html/   
+│   ├── register.html/   
+│
+├── README.md               
+└── cAe.bat        # Levanta la app (scrpt de compilacion)
+
+## 3. 🔌 Configuración de la Conexión a la Base de Datos
 
 El servidor requiere la URI de conexión a MongoDB.
 
@@ -19,7 +51,7 @@ El servidor requiere la URI de conexión a MongoDB.
 
 - **Configurar la URI:** Dado que el archivo `.env` ya está configurado en el proyecto, si por alguna razón no se estuviera usando o se quisiera una configuración local rápida, puedes pegar la URI directamente en la constante `DB_URI` dentro del archivo `fp/backend/server.js`.
 
-## 3. 🚀 Instalación y Seed de Datos
+## 4. 🚀 Instalación y Seed de Datos
 
 ### A. Instalación de Dependencias
 
@@ -35,10 +67,11 @@ npm install
 Ejecuta el script de seed para crear el usuario administrador inicial en tu base de datos (admin@app.com / 123). Solo debes ejecutar esto la primera vez.
 
 ```bash
-node seedAdmin.js
+cd fp/backend
+node scripts/seedAdmin.js
 ```
 
-## 4. ▶️ Iniciar la Aplicación
+## 5. ▶️ Iniciar la Aplicación
 
 El servidor backend puede iniciarse de dos formas:
 

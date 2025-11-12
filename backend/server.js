@@ -505,7 +505,7 @@ app.get('/api/recetas/inventario', checkAuth, async (req, res) => {
 });
 
 
-// BUSCAR DETALLES DE RECETA (PROXY SEGURO) - (IDÉNTICO EN AMBAS BRANCHES)
+// BUSCAR DETALLES DE RECETA (PROXY SEGURO)
 /**
  * @brief Endpoint para obtener los detalles de una receta específica usando el Backend como proxy seguro.
  * @route GET /api/recetas/detalles/:recipeId
